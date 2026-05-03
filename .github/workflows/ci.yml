@@ -333,6 +333,9 @@ jobs:
         id: resolve_keystore
         shell: bash
         run: |
+          KEYSTORE_STORE_PASSWORD="$(printf '%s' "$KEYSTORE_STORE_PASSWORD" | tr -d '\r\n')"
+          KEYSTORE_KEY_PASSWORD="$(printf '%s' "$KEYSTORE_KEY_PASSWORD" | tr -d '\r\n')"
+
           KEYSTORE_LIST="$(keytool -list \
             -keystore release-keystore.jks \
             -storepass "$KEYSTORE_STORE_PASSWORD" \
