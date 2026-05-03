@@ -19,13 +19,9 @@ class GokrazyManagerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const seed = Color(0xff0f4f67);
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: Brightness.dark,
-    );
-    final panel = const Color(0xff101a2d).withValues(alpha: 0.82);
-    const layer = Color(0xff1b2842);
-    const border = Color(0xff243858);
+    final colorScheme = ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark);
+    final pageBg = const Color(0xff0c1323);
+    final cardBg = colorScheme.surfaceContainerHighest.withValues(alpha: 0.76);
     return MaterialApp(
       title: 'Gokrazy Manager',
       debugShowCheckedModeBanner: false,
@@ -33,18 +29,18 @@ class GokrazyManagerApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: colorScheme,
         visualDensity: VisualDensity.adaptivePlatformDensity,
-        scaffoldBackgroundColor: Colors.transparent,
+        scaffoldBackgroundColor: pageBg,
         cardTheme: CardThemeData(
-          color: panel,
+          color: cardBg,
           elevation: 0,
           surfaceTintColor: colorScheme.primary.withValues(alpha: 0.08),
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
         appBarTheme: AppBarTheme(
-          backgroundColor: Colors.transparent,
+          backgroundColor: pageBg,
           foregroundColor: colorScheme.onSurface,
           centerTitle: false,
           scrolledUnderElevation: 0,
@@ -60,56 +56,55 @@ class GokrazyManagerApp extends StatelessWidget {
           style: ButtonStyle(
             shape: WidgetStatePropertyAll(
               RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(12)),
+                borderRadius: BorderRadius.all(Radius.circular(10)),
               ),
             ),
-            padding: WidgetStatePropertyAll(EdgeInsets.all(10)),
+            padding: WidgetStatePropertyAll(EdgeInsets.all(8)),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             elevation: 0,
             backgroundColor: colorScheme.primary,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.all(Radius.circular(12)),
             ),
             textStyle: const TextStyle(fontWeight: FontWeight.w600),
-            minimumSize: const Size(0, 46),
+            minimumSize: const Size(0, 42),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: colorScheme.onSurface,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.all(Radius.circular(12)),
             ),
             textStyle: const TextStyle(fontWeight: FontWeight.w600),
-            minimumSize: const Size(0, 46),
+            minimumSize: const Size(0, 42),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: border),
+            borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.35)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: border.withValues(alpha: 0.5)),
+            borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.35)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: colorScheme.primary, width: 1.3),
+            borderSide: BorderSide(color: colorScheme.primary),
           ),
           labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
           hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-          fillColor: layer,
+          fillColor: colorScheme.surface,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
         chipTheme: ChipThemeData(
-          color: WidgetStateProperty.resolveWith((_) => panel),
           labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           side: BorderSide.none,
@@ -119,7 +114,7 @@ class GokrazyManagerApp extends StatelessWidget {
           ),
         ),
         dividerTheme: DividerThemeData(
-          color: border.withValues(alpha: 0.7),
+          color: colorScheme.outline.withValues(alpha: 0.35),
           space: 0,
           thickness: 1,
         ),
@@ -915,68 +910,49 @@ class _HomePageState extends State<HomePage> {
     final selected = _instances
         .where((entry) => entry.id == _selectedId)
         .firstOrNull;
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color(0xff081226),
-            Color(0xff0f1d38),
-            Color(0xff0b1224),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Gokrazy Manager'),
+        leading: _instances.isNotEmpty
+            ? IconButton(
+                tooltip: 'Refresh selected',
+                onPressed: selected == null ? null : () => _refresh(selected),
+                icon: const Icon(Icons.refresh_rounded),
+              )
+            : null,
+        actions: [
+          IconButton(
+            tooltip: 'Refresh all',
+            onPressed: _refreshAll,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
       ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _openEditor(),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Add instance'),
-          tooltip: 'Add instance',
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-        appBar: AppBar(
-          title: const Text('Gokrazy Manager'),
-          leading: _instances.isNotEmpty
-              ? IconButton(
-                  tooltip: 'Refresh selected',
-                  onPressed: selected == null ? null : () => _refresh(selected),
-                  icon: const Icon(Icons.refresh_rounded),
-                )
-              : null,
-          actions: [
-            IconButton(
-              tooltip: 'Refresh all',
-              onPressed: _refreshAll,
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
-        ),
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          child: _loading
-              ? const Center(child: CircularProgressIndicator(strokeWidth: 3))
-              : _instances.isEmpty
-                  ? EmptyState(onAdd: () => _openEditor())
-                  : LayoutBuilder(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openEditor(),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Add instance'),
+        tooltip: 'Add instance',
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(strokeWidth: 3))
+            : _instances.isEmpty
+                ? EmptyState(onAdd: () => _openEditor())
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= 860;
-                        final list = Card(
-                          margin: const EdgeInsets.only(
-                            left: 14,
-                            right: 12,
-                            top: 12,
-                            bottom: 12,
-                          ),
-                          child: InstanceList(
-                            instances: _instances,
-                            statuses: _statuses,
-                            errors: _errors,
-                            selectedId: _selectedId,
-                            onSelect: (id) => setState(() => _selectedId = id),
-                            onRefresh: _refresh,
-                          ),
+                        final wide = constraints.maxWidth >= 900;
+                        final list = InstanceList(
+                          instances: _instances,
+                          statuses: _statuses,
+                          errors: _errors,
+                          selectedId: _selectedId,
+                          onSelect: (id) => setState(() => _selectedId = id),
+                          onRefresh: _refresh,
                         );
                         final detail = selected == null
                             ? const SizedBox.shrink()
@@ -999,23 +975,23 @@ class _HomePageState extends State<HomePage> {
                         if (!wide) {
                           return Column(
                             children: [
-                              SizedBox(height: 226, child: list),
-                              const Divider(height: 1),
+                              SizedBox(height: 220, child: list),
+                              const SizedBox(height: 12),
                               Expanded(child: detail),
                             ],
                           );
                         }
                         return Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(width: 360, child: list),
-                            const VerticalDivider(width: 1),
+                            SizedBox(width: 340, child: list),
+                            const SizedBox(width: 12),
                             Expanded(child: detail),
                           ],
                         );
                       },
                     ),
-        ),
+                  ),
       ),
     );
   }
@@ -1193,36 +1169,28 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 28),
+        padding: const EdgeInsets.symmetric(horizontal: 22),
         child: Card(
           margin: EdgeInsets.zero,
+          clipBehavior: Clip.antiAlias,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+            padding: const EdgeInsets.fromLTRB(24, 30, 24, 26),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  height: 88,
-                  width: 88,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
-                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: const Icon(Icons.cloud_queue_rounded, size: 48),
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: colors.surfaceContainerHighest,
+                  foregroundColor: colors.onSurface,
+                  child: const Icon(Icons.cloud_queue_rounded, size: 32),
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  'No Gokrazy instances yet',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  'No instances yet',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -1231,10 +1199,9 @@ class EmptyState extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 16),
-                FilledButton.icon(
+                FilledButton(
                   onPressed: onAdd,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Create first instance'),
+                  child: const Text('Create first instance'),
                 ),
               ],
             ),
@@ -1265,62 +1232,73 @@ class InstanceList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-          child: Text(
-            'Instances',
-            style: Theme.of(context).textTheme.titleMedium,
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+            child: Text(
+              'Instances',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ),
         ),
+        const SizedBox(height: 8),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-            itemCount: instances.length,
-            itemBuilder: (context, index) {
-              final instance = instances[index];
-              final status = statuses[instance.id];
-              final error = errors[instance.id];
-              final selected = selectedId == instance.id;
-              final isHealthy = status != null && error == null;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: selected
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.outline.withValues(alpha: 0.22),
-                  ),
-                ),
-                child: ListTile(
+          child: Card(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+              itemCount: instances.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final instance = instances[index];
+                final status = statuses[instance.id];
+                final error = errors[instance.id];
+                final selected = selectedId == instance.id;
+                final isHealthy = status != null && error == null;
+                return InkWell(
                   onTap: () => onSelect(instance.id),
-                  selected: selected,
-                  selectedTileColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                  leading: StatusDot(ok: isHealthy),
-                  title: Text(
-                    instance.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: selected
+                            ? colors.primary.withValues(alpha: 0.55)
+                            : colors.outline.withValues(alpha: 0.28),
+                      ),
+                      color: selected
+                          ? colors.primaryContainer.withValues(alpha: 0.45)
+                          : null,
+                    ),
+                    child: ListTile(
+                      onTap: () => onSelect(instance.id),
+                      contentPadding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
+                      leading: StatusDot(ok: isHealthy),
+                      title: Text(
+                        instance.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: status == null
+                          ? Text(instance.baseUrl, maxLines: 1, overflow: TextOverflow.ellipsis)
+                          : Text(
+                              '${status.runningServices}/${status.services.length} services running',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                      trailing: IconButton(
+                        tooltip: 'Refresh',
+                        onPressed: () => onRefresh(instance),
+                        icon: const Icon(Icons.refresh_rounded, size: 20),
+                      ),
+                    ),
                   ),
-                  subtitle: status == null
-                      ? Text(instance.baseUrl, maxLines: 1, overflow: TextOverflow.ellipsis)
-                      : Text(
-                          '${status.runningServices}/${status.services.length} services running',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                  trailing: IconButton(
-                    tooltip: 'Refresh',
-                    onPressed: () => onRefresh(instance),
-                    icon: const Icon(Icons.sync_rounded, size: 20),
-                  ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ],
