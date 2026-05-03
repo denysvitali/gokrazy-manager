@@ -416,9 +416,7 @@ jobs:
           flutter build apk --release --no-pub \
             --target-platform android-arm64 \
             --build-number ${{ steps.build_meta.outputs.BUILD_NUMBER }} \
-            --dart-define=SENTRY_RELEASE=gokrazy_manager@0.1.0+${{ steps.build_meta.outputs.BUILD_NUMBER }} \
-            --split-debug-info=build/debug-info \
-            --obfuscate
+            --dart-define=SENTRY_RELEASE=gokrazy_manager@0.1.0+${{ steps.build_meta.outputs.BUILD_NUMBER }}
 
       - name: Upload debug symbols to Sentry
         if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
@@ -435,13 +433,6 @@ jobs:
           name: gokrazy-manager-release-${{ steps.flavor.outputs.FLAVOR }}-b${{ steps.build_meta.outputs.BUILD_NUMBER }}
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
-
-      - name: Upload debug info artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: debug-info-release-${{ steps.flavor.outputs.FLAVOR }}-b${{ steps.build_meta.outputs.BUILD_NUMBER }}
-          path: build/debug-info/
-          retention-days: 90
 
       - name: Determine release version
         id: release_version
