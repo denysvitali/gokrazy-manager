@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:io' as io;
 
 import 'package:convert/convert.dart' show AccumulatorSink;
 import 'package:crypto/crypto.dart';
@@ -596,6 +597,7 @@ class GokrazyClient {
     required Stream<List<int>> stream,
     required int size,
     required void Function(int sent, int total) onProgress,
+    bool decompress = false,
   }) async {
     String? untrustedFingerprint;
     final client = _httpClient(
@@ -608,22 +610,20 @@ class GokrazyClient {
       var sent = 0;
       final output = AccumulatorSink<Digest>();
       final input = sha256.startChunkedConversion(output);
-      final hashingStream = stream.transform(
-        StreamTransformer<List<int>, List<int>>.fromHandlers(
-          handleData: (chunk, sink) {
-            sent += chunk.length;
-            input.add(chunk);
-            onProgress(sent, size);
-            sink.add(chunk);
-          },
-          handleDone: (sink) {
-            input.close();
-            sink.close();
-          },
-        ),
-      );
 
-      await request.addStream(hashingStream);
+      Stream<List<int>> uploadStream = stream;
+      if (decompress) {
+        uploadStream = stream.transform(io.gzip.decoder);
+      }
+
+      final hashed = uploadStream.map((chunk) {
+        sent += chunk.length;
+        input.add(chunk);
+        onProgress(sent, size);
+        return chunk;
+      });
+
+      await request.addStream(hashed);
       final response = await request.close();
       final body = (await response.transform(utf8.decoder).join()).trim();
       if (response.statusCode != HttpStatus.ok) {
