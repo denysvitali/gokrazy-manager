@@ -324,6 +324,64 @@ class GokrazyClient {
     return _requestText('POST', suffix).then((_) {});
   }
 
+  Future<void> startService(String path) => _serviceAction(
+        endpoint: 'restart',
+        path: path,
+        superviseMode: 'once',
+      );
+
+  Future<void> restartService(String path) => _serviceAction(
+        endpoint: 'restart',
+        path: path,
+        superviseMode: 'loop',
+      );
+
+  Future<void> stopService(String path) => _serviceAction(
+        endpoint: 'stop',
+        path: path,
+      );
+
+  Stream<String> serviceLogStream({
+    required String path,
+    String stream = 'both',
+    int maxLines = 1200,
+  }) async* {
+    final lines = <String>[];
+    final client = _httpClient();
+    try {
+      final request = await client.getUrl(
+        _uri('log').replace(queryParameters: {'path': path, 'stream': stream}),
+      );
+      request.headers.set(HttpHeaders.acceptHeader, 'text/event-stream');
+      final response = await request.close();
+      final body = response.transform(utf8.decoder).transform(const LineSplitter());
+
+      if (response.statusCode != HttpStatus.ok) {
+        final text = await body.join();
+        throw HttpException('HTTP ${response.statusCode}: ${text.trim()}');
+      }
+
+      await for (final line in body) {
+        final trimmed = line.trim();
+        if (trimmed.startsWith('event:')) {
+          continue;
+        }
+        if (trimmed.startsWith('data:')) {
+          final decoded = trimmed.substring(5).trimLeft();
+          if (decoded.isNotEmpty) {
+            lines.add(decoded);
+            if (lines.length > maxLines) {
+              lines.removeRange(0, lines.length - maxLines);
+            }
+            yield lines.join('\n');
+          }
+        }
+      }
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   Future<void> uploadRoot({
     required Stream<List<int>> stream,
     required int size,
@@ -365,6 +423,8 @@ class GokrazyClient {
       if (body != localHash) {
         throw StateError('Checksum mismatch: device returned $body, sent $localHash');
       }
+    } on CertificatePinRequired {
+      rethrow;
     } on HandshakeException {
       final fingerprint = untrustedFingerprint;
       if (fingerprint != null) {
@@ -374,6 +434,73 @@ class GokrazyClient {
     } finally {
       client.close(force: true);
     }
+  }
+
+  Future<void> _serviceAction({
+    required String endpoint,
+    required String path,
+    String? superviseMode,
+    String? signal,
+  }) async {
+    String? untrustedFingerprint;
+    final client = _httpClient(
+      onBadCertificate: (fingerprint) => untrustedFingerprint = fingerprint,
+    );
+    try {
+      final xsrf = await _fetchXsrfToken(client: client, path: path);
+      final params = {
+        'path': path,
+        'xsrftoken': xsrf,
+        if (superviseMode != null) 'supervise': superviseMode,
+        if (signal != null) 'signal': signal,
+      };
+      final request = await client.postUrl(_uri(endpoint).replace(queryParameters: params));
+      request.headers.set(HttpHeaders.cookieHeader, 'gokrazy_xsrf=$xsrf');
+      request.headers.set(
+        HttpHeaders.contentTypeHeader,
+        'application/x-www-form-urlencoded',
+      );
+      _setHeaders(request, keepJsonAccept: false);
+      final response = await request.close();
+      final body = (await response.transform(utf8.decoder).join()).trim();
+      if (response.statusCode != HttpStatus.ok && response.statusCode != HttpStatus.seeOther) {
+        throw HttpException('HTTP ${response.statusCode}: $body');
+      }
+    } on CertificatePinRequired {
+      rethrow;
+    } on HandshakeException {
+      final fingerprint = untrustedFingerprint;
+      if (fingerprint != null) {
+        throw CertificatePinRequired(fingerprint);
+      }
+      rethrow;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  Future<String> _fetchXsrfToken({
+    required HttpClient client,
+    required String path,
+  }) async {
+    final request = await client.getUrl(_uri('status').replace(queryParameters: {'path': path}));
+    _setHeaders(request, keepJsonAccept: false);
+    final response = await request.close();
+    final cookieHeaders = response.headers[HttpHeaders.setCookieHeader];
+    final body = (await response.transform(utf8.decoder).join()).trim();
+    if (response.statusCode != HttpStatus.ok) {
+      throw HttpException('HTTP ${response.statusCode}: $body');
+    }
+    for (final cookie in cookieHeaders ?? const <String>[]) {
+      final match = cookie
+          .split(';')
+          .map((entry) => entry.trim())
+          .firstWhere((entry) => entry.startsWith('gokrazy_xsrf='), orElse: () => '');
+      if (match.isNotEmpty) {
+        return match.substring('gokrazy_xsrf='.length);
+      }
+    }
+    throw StateError('XSRF token not found in /status response');
   }
 
   Future<String> _requestText(String method, String path) async {
@@ -419,8 +546,11 @@ class GokrazyClient {
     return Uri.parse(base).resolve(path);
   }
 
-  void _setHeaders(HttpClientRequest request) {
+  void _setHeaders(HttpClientRequest request, {bool keepJsonAccept = true}) {
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    if (!keepJsonAccept) {
+      request.headers.remove(HttpHeaders.acceptHeader);
+    }
     request.headers.set(HttpHeaders.contentTypeHeader, 'application/octet-stream');
     request.headers.set(
       HttpHeaders.authorizationHeader,
@@ -1111,6 +1241,88 @@ class _InstanceDetailState extends State<InstanceDetail> {
     }
   }
 
+  Future<void> _runServiceAction(
+    String label,
+    GokrazyService service,
+    Future<void> Function(GokrazyClient client) action,
+  ) async {
+    await _runAction(label, (client) => action(client));
+    if (mounted) {
+      widget.onRefresh();
+    }
+  }
+
+  Future<void> _openServiceLogs(GokrazyService service) async {
+    final repo = await InstanceRepository.open();
+    final password = await repo.passwordFor(widget.instance.id);
+    if (password == null) {
+      _showSnack('Missing password');
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    final stream = GokrazyClient(instance: widget.instance, password: password)
+        .serviceLogStream(path: service.path, stream: 'both');
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.8,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (_, controller) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: StreamBuilder<String>(
+                stream: stream,
+                builder: (context, snapshot) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${service.name} logs', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.blueGrey.shade200),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: SingleChildScrollView(
+                              controller: controller,
+                              child: SelectableText(
+                                snapshot.data ?? 'Connecting...',
+                                style: const TextStyle(fontFamily: 'monospace'),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showSnack(String text) {
     if (!mounted) {
       return;
@@ -1176,7 +1388,25 @@ class _InstanceDetailState extends State<InstanceDetail> {
               onReboot: () => _runAction('Reboot requested', (client) => client.reboot()),
             ),
             const SizedBox(height: 12),
-            ServicesCard(services: status.services),
+            ServicesCard(
+              services: status.services,
+              onStart: (service) => _runServiceAction(
+                'Service started',
+                service,
+                (client) => client.startService(service.path),
+              ),
+              onStop: (service) => _runServiceAction(
+                'Service stopped',
+                service,
+                (client) => client.stopService(service.path),
+              ),
+              onRestart: (service) => _runServiceAction(
+                'Service restarted',
+                service,
+                (client) => client.restartService(service.path),
+              ),
+              onLogs: _openServiceLogs,
+            ),
           ],
         ],
       ),
@@ -1332,9 +1562,20 @@ class FlashCard extends StatelessWidget {
 }
 
 class ServicesCard extends StatelessWidget {
-  const ServicesCard({required this.services, super.key});
+  const ServicesCard({
+    required this.services,
+    required this.onStart,
+    required this.onStop,
+    required this.onRestart,
+    required this.onLogs,
+    super.key,
+  });
 
   final List<GokrazyService> services;
+  final ValueChanged<GokrazyService> onStart;
+  final ValueChanged<GokrazyService> onStop;
+  final ValueChanged<GokrazyService> onRestart;
+  final ValueChanged<GokrazyService> onLogs;
 
   @override
   Widget build(BuildContext context) {
@@ -1352,11 +1593,31 @@ class ServicesCard extends StatelessWidget {
                 leading: StatusDot(ok: service.running),
                 title: Text(service.name),
                 subtitle: Text(service.stopped ? 'Stopped' : 'PID ${service.pid ?? '-'}'),
-                trailing: service.args.isEmpty
-                    ? null
-                    : Tooltip(
+                trailing: Wrap(
+                  spacing: 8,
+                  children: [
+                    IconButton(
+                      tooltip: service.stopped ? 'Start' : 'Stop',
+                      onPressed: () => service.stopped ? onStart(service) : onStop(service),
+                      icon: service.stopped ? const Icon(Icons.play_arrow) : const Icon(Icons.stop),
+                    ),
+                    IconButton(
+                      tooltip: 'Restart',
+                      onPressed: () => onRestart(service),
+                      icon: const Icon(Icons.refresh),
+                    ),
+                    IconButton(
+                      tooltip: 'Logs',
+                      onPressed: () => onLogs(service),
+                      icon: const Icon(Icons.terminal),
+                    ),
+                    if (service.args.isNotEmpty)
+                      Tooltip(
                         message: service.args.join(' '),
                         child: const Icon(Icons.tune),
+                      ),
+                  ],
+                ),
                       ),
               ),
             ),
