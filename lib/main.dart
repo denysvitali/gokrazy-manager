@@ -1686,7 +1686,7 @@ class _InstanceDetailState extends State<InstanceDetail> {
     }
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['squashfs', 'img', 'bin'],
+      allowedExtensions: const ['squashfs', 'squashfs.gz', 'img', 'bin'],
       withReadStream: true,
     );
     final file = result?.files.single;
