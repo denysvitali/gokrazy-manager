@@ -36,8 +36,6 @@ env:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   # Run analyze and test in parallel. Both need pub get but are independent after.
@@ -267,7 +265,7 @@ jobs:
           APP_ENV: ${{ steps.flavor.outputs.FLAVOR }}
           KEYSTORE_PATH: ${{ steps.debug_keystore.outputs.KEYSTORE_PATH }}
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v7
@@ -360,7 +358,7 @@ jobs:
           echo "can_release=true" >> "$GITHUB_OUTPUT"
         env:
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
       - name: Setup Java
         if: ${{ steps.validate_keystore.outputs.can_release == 'true' }}
@@ -430,7 +428,7 @@ jobs:
           APP_ENV: ${{ steps.flavor.outputs.FLAVOR }}
           KEYSTORE_PATH: ${{ github.workspace }}/release-keystore.jks
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
           GRADLE_OPTS: '-Dorg.gradle.jvmargs=-Xmx4g'
         run: |
           flutter build apk --release --no-pub \
@@ -489,105 +487,3 @@ jobs:
           files: build/app/outputs/flutter-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build-web:
-    name: Build Web
-    runs-on: ubuntu-latest
-    env:
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: 3.38.7
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml', '**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Compute build metadata
-        id: build_meta
-        run: |
-          BUILD_NUMBER=$(( ${{ github.run_number }} * 100 + ${{ github.run_attempt }} ))
-          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_OUTPUT
-
-      - name: Build Web
-        run: |
-          flutter build web --release \
-            --base-href '/${{ github.event.repository.name }}/' \
-            --source-maps \
-            --dart-define=COMMIT_SHA=${{ github.sha }} \
-            --dart-define=SENTRY_RELEASE=trip_viewer@1.0.0+${{ steps.build_meta.outputs.BUILD_NUMBER }}
-
-      - name: Upload web source maps to Sentry
-        if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
-        run: |
-          flutter pub run sentry_dart_plugin
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_DIST: ${{ steps.build_meta.outputs.BUILD_NUMBER }}
-          SENTRY_RELEASE: trip_viewer@1.0.0+${{ steps.build_meta.outputs.BUILD_NUMBER }}
-
-      - name: Cache-bust assets
-        run: |
-          # Bust flutter_bootstrap.js so the browser fetches the new bootstrap,
-          # which contains the updated serviceWorkerVersion that triggers a
-          # service-worker update → fresh main.dart.js + all hashed assets.
-          sed -i 's|flutter_bootstrap.js"|flutter_bootstrap.js?v=${{ github.sha }}"|' \
-            build/web/index.html
-          # Prevent browser caching of index.html itself
-          sed -i 's|<head>|<head><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">|' \
-            build/web/index.html
-          # Custom domain for GitHub Pages
-          echo "happy.denv.it" > build/web/CNAME
-
-      - name: Upload Web Build
-        uses: actions/upload-artifact@v7
-        with:
-          name: web-build
-          path: build/web
-          retention-days: 1
-
-  deploy-web:
-    name: Deploy to GitHub Pages
-    needs: build-web
-    runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) ||
-      github.event_name == 'workflow_dispatch'
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Download Web Build
-        uses: actions/download-artifact@v8
-        with:
-          name: web-build
-          path: build/web
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v6
-
-      - name: Upload to GitHub Pages
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: build/web
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5

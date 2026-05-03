@@ -296,13 +296,17 @@ class GokrazyClient {
 
   Future<List<String>> fetchFeatures() async {
     final body = await _requestText('GET', 'update/features');
-    final decoded = jsonDecode(body);
-    if (decoded is Map) {
-      return '${decoded['features'] ?? ''}'
-          .split(',')
-          .map((entry) => entry.trim())
-          .where((entry) => entry.isNotEmpty)
-          .toList();
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map) {
+        return '${decoded['features'] ?? ''}'
+            .split(',')
+            .map((entry) => entry.trim())
+            .where((entry) => entry.isNotEmpty)
+            .toList();
+      }
+    } on FormatException {
+      // Older gokrazy versions return a text/plain comma separated list.
     }
     return body
         .split(',')
@@ -528,7 +532,6 @@ class _HomePageState extends State<HomePage> {
           password: password,
           stayOnPage: true,
         );
-        await _refresh(instance.copyWith(pinnedFingerprint: error.fingerprint));
       } else if (mounted) {
         setState(() => _errors[instance.id] = 'Certificate not trusted');
       }
@@ -1002,7 +1005,7 @@ class InstanceDetail extends StatefulWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onRefresh;
-  final ValueChanged<String> onPinned;
+  final Future<void> Function(String fingerprint) onPinned;
 
   @override
   State<InstanceDetail> createState() => _InstanceDetailState();
@@ -1074,7 +1077,7 @@ class _InstanceDetailState extends State<InstanceDetail> {
         setState(() => _uploadMessage = 'Upload verified');
       }
     } on CertificatePinRequired catch (error) {
-      widget.onPinned(error.fingerprint);
+      await widget.onPinned(error.fingerprint);
       _showSnack('Certificate pinned. Try upload again.');
     } catch (error) {
       _showSnack(error.toString());
