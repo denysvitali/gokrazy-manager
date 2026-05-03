@@ -333,22 +333,50 @@ jobs:
         id: resolve_keystore
         shell: bash
         run: |
-          KEYSTORE_STORE_PASSWORD="$(printf '%s' "$KEYSTORE_STORE_PASSWORD" | tr -d '\r\n')"
-          KEYSTORE_KEY_PASSWORD="$(printf '%s' "$KEYSTORE_KEY_PASSWORD" | tr -d '\r\n')"
+          KEYSTORE_STORE_PASSWORD="$(printf '%s' "$KEYSTORE_STORE_PASSWORD" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          KEYSTORE_KEY_PASSWORD="$(printf '%s' "$KEYSTORE_KEY_PASSWORD" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+
+          if [ -z "$KEYSTORE_STORE_PASSWORD" ]; then
+            echo "::error::KEYSTORE_STORE_PASSWORD is empty after trimming"
+            exit 1
+          fi
 
           KEYSTORE_LIST="$(keytool -list \
+            -v \
             -keystore release-keystore.jks \
             -storepass "$KEYSTORE_STORE_PASSWORD" \
             2>&1 || true)"
-          if echo "$KEYSTORE_LIST" | grep -q "Keystore was tampered"; then
+          if [ -z "$KEYSTORE_LIST" ]; then
+            echo "::error::Could not read keystore output from keytool"
+            exit 1
+          fi
+
+          if echo "$KEYSTORE_LIST" | grep -qi "keystore password was incorrect"; then
             echo "::error::Invalid KEYSTORE_STORE_PASSWORD"
+            exit 1
+          fi
+
+          if echo "$KEYSTORE_LIST" | grep -qi "keystore was tampered"; then
+            echo "::error::Invalid KEYSTORE_STORE_PASSWORD"
+            exit 1
+          fi
+
+          if echo "$KEYSTORE_LIST" | grep -qi "is not a valid keystore"; then
+            echo "::error::release-keystore.jks is not a valid keystore or KEYSTORE_BASE64 is corrupt"
             exit 1
           fi
 
           mapfile -t AVAILABLE_ALIASES < <(
             printf '%s\n' "$KEYSTORE_LIST" \
-            | awk 'match($0, /^Alias name: (.*)$/, a) { print a[1] }'
+            | sed -nE "s/^[[:space:]]*[Aa]lias[[:space:]]*name:[[:space:]]*([^,]+).*/\\1/p"
           )
+
+          if [ "${#AVAILABLE_ALIASES[@]}" -eq 0 ]; then
+            echo "::error::Could not parse keystore aliases from keytool output"
+            echo "::warning::Keytool output head (redacted):"
+            printf '%s\n' "$KEYSTORE_LIST" | sed -n '1,6p' | sed 's/\x1b\\[[0-9;]*m//g'
+            exit 1
+          fi
 
           KEY_ALIAS="$KEYSTORE_KEY_ALIAS"
           if [ -n "$KEY_ALIAS" ]; then
