@@ -1719,10 +1719,11 @@ class _InstanceDetailState extends State<InstanceDetail> {
     if (confirmed != true) {
       return;
     }
+    final isGzipped = file.name.endsWith('.squashfs.gz') || file.name.endsWith('.img.gz') || file.name.endsWith('.bin.gz');
     setState(() {
       _busy = true;
       _uploadProgress = 0;
-      _uploadMessage = 'Uploading ${file.name}';
+      _uploadMessage = 'Uploading ${file.name}${isGzipped ? ' (decompressing)' : ''}';
     });
     try {
       await GokrazyClient(instance: widget.instance, password: password).uploadRoot(
@@ -1733,6 +1734,7 @@ class _InstanceDetailState extends State<InstanceDetail> {
             setState(() => _uploadProgress = sent / total);
           }
         },
+        decompress: isGzipped,
       );
       if (mounted) {
         setState(() => _uploadMessage = 'Upload verified');
