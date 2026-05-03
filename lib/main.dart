@@ -25,18 +25,30 @@ class GokrazyManagerApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: seed),
-        scaffoldBackgroundColor: const Color(0xfff8fafc),
+        scaffoldBackgroundColor: const Color(0xfff5f7fa),
+        cardColor: Colors.white,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
         cardTheme: CardThemeData(
           elevation: 0,
           color: Colors.white,
           margin: EdgeInsets.zero,
+          shadowColor: Colors.black12,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: BorderSide(color: Colors.blueGrey.shade100),
           ),
         ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
         inputDecorationTheme: const InputDecorationTheme(
           border: OutlineInputBorder(),
+        ),
+        textTheme: const TextTheme(
+          titleLarge: TextStyle(fontWeight: FontWeight.w700),
+          titleMedium: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
       home: const HomePage(),
@@ -1338,30 +1350,13 @@ class _InstanceDetailState extends State<InstanceDetail> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.instance.name, style: Theme.of(context).textTheme.headlineSmall),
-                    const SizedBox(height: 4),
-                    Text(widget.instance.baseUrl),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'Edit',
-                onPressed: widget.onEdit,
-                icon: const Icon(Icons.edit_outlined),
-              ),
-              IconButton(
-                tooltip: 'Delete',
-                onPressed: widget.onDelete,
-                icon: const Icon(Icons.delete_outline),
-              ),
-            ],
+          _InstanceHeaderCard(
+            instance: widget.instance,
+            status: status,
+            onEdit: widget.onEdit,
+            onDelete: widget.onDelete,
+            onRefresh: () => widget.onRefresh(),
+            hasError: widget.error != null,
           ),
           if (widget.error != null) ...[
             const SizedBox(height: 12),
@@ -1410,6 +1405,118 @@ class _InstanceDetailState extends State<InstanceDetail> {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _InstanceHeaderCard extends StatelessWidget {
+  const _InstanceHeaderCard({
+    required this.instance,
+    required this.status,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onRefresh,
+    required this.hasError,
+  });
+
+  final GokrazyInstance instance;
+  final GokrazyStatus? status;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onRefresh;
+  final bool hasError;
+
+  @override
+  Widget build(BuildContext context) {
+    final runningServices = status?.services.where((service) => service.running).length ?? 0;
+    final totalServices = status?.services.length ?? 0;
+    final stopped = hasError || status == null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(instance.name, style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 4),
+                      Text(instance.baseUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Refresh',
+                  onPressed: onRefresh,
+                  icon: const Icon(Icons.sync_rounded),
+                ),
+                IconButton(
+                  tooltip: 'Edit',
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+                IconButton(
+                  tooltip: 'Delete',
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _StatusChip(
+                  icon: stopped ? Icons.wifi_off : Icons.wifi,
+                  label: stopped ? 'Connection issue' : 'Connected',
+                  color: stopped ? Colors.red : Colors.green,
+                ),
+                if (status != null)
+                  _StatusChip(
+                    icon: Icons.miscellaneous_services,
+                    label: 'Services $runningServices/$totalServices',
+                    color: Colors.blueGrey,
+                  ),
+                if (status?.hostname != null && status!.hostname!.isNotEmpty)
+                  _StatusChip(
+                    icon: Icons.computer,
+                    label: status!.hostname!,
+                    color: Colors.indigo,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      avatar: Icon(icon, size: 16, color: color),
+      label: Text(label),
+      side: BorderSide(color: color.withValues(alpha: 0.35)),
+      visualDensity: VisualDensity.compact,
+      labelStyle: TextStyle(color: Colors.black87),
     );
   }
 }
@@ -1587,38 +1694,62 @@ class ServicesCard extends StatelessWidget {
           children: [
             Text('Services', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
+            if (services.isEmpty)
+              Text('No services found', style: Theme.of(context).textTheme.bodyMedium),
             ...services.map(
-              (service) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: StatusDot(ok: service.running),
-                title: Text(service.name),
-                subtitle: Text(service.stopped ? 'Stopped' : 'PID ${service.pid ?? '-'}'),
-                trailing: Wrap(
-                  spacing: 8,
-                  children: [
-                    IconButton(
-                      tooltip: service.stopped ? 'Start' : 'Stop',
-                      onPressed: () => service.stopped ? onStart(service) : onStop(service),
-                      icon: service.stopped ? const Icon(Icons.play_arrow) : const Icon(Icons.stop),
+              (service) => Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: StatusDot(ok: service.running),
+                          title: Text(
+                            service.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(service.stopped
+                              ? 'Stopped'
+                              : 'PID ${service.pid ?? '-'} • started ${service.startTime ?? 'unknown'}'),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            IconButton.filledTonal(
+                              tooltip: service.stopped ? 'Start' : 'Stop',
+                              onPressed: () => service.stopped ? onStart(service) : onStop(service),
+                              icon: service.stopped ? const Icon(Icons.play_arrow) : const Icon(Icons.stop),
+                            ),
+                            IconButton.filledTonal(
+                              tooltip: 'Restart',
+                              onPressed: () => onRestart(service),
+                              icon: const Icon(Icons.refresh),
+                            ),
+                            IconButton.filledTonal(
+                              tooltip: 'Logs',
+                              onPressed: () => onLogs(service),
+                              icon: const Icon(Icons.terminal),
+                            ),
+                            if (service.args.isNotEmpty)
+                              OutlinedButton.icon(
+                                onPressed: () => _showServiceArgs(context, service),
+                                icon: const Icon(Icons.tune, size: 16),
+                                label: Text('Args ${service.args.length}'),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      tooltip: 'Restart',
-                      onPressed: () => onRestart(service),
-                      icon: const Icon(Icons.refresh),
-                    ),
-                    IconButton(
-                      tooltip: 'Logs',
-                      onPressed: () => onLogs(service),
-                      icon: const Icon(Icons.terminal),
-                    ),
-                    if (service.args.isNotEmpty)
-                      Tooltip(
-                        message: service.args.join(' '),
-                        child: const Icon(Icons.tune),
-                      ),
-                  ],
+                  ),
                 ),
-                      ),
               ),
             ),
           ],
@@ -1626,6 +1757,24 @@ class ServicesCard extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showServiceArgs(BuildContext context, GokrazyService service) {
+  showDialog<void>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text('${service.name} args'),
+        content: SelectableText(service.args.join('\n')),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class Meter extends StatelessWidget {
