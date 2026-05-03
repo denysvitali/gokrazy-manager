@@ -333,19 +333,40 @@ jobs:
         id: resolve_keystore
         shell: bash
         run: |
-          KEY_ALIAS="$KEYSTORE_KEY_ALIAS"
-          if [ -z "$KEY_ALIAS" ]; then
-            KEY_ALIAS="$(keytool -list \
+          mapfile -t AVAILABLE_ALIASES < <(
+            keytool -list \
               -keystore release-keystore.jks \
               -storepass "$KEYSTORE_STORE_PASSWORD" \
               2>/dev/null \
-              | awk 'match($0, /^Alias name: (.*)$/, a) { print a[1]; exit }')"
+            | awk 'match($0, /^Alias name: (.*)$/, a) { print a[1] }'
+          )
+
+          KEY_ALIAS="$KEYSTORE_KEY_ALIAS"
+          if [ -n "$KEY_ALIAS" ]; then
+            ALIAS_FOUND="false"
+            for ALIAS in "${AVAILABLE_ALIASES[@]}"; do
+              if [ "$ALIAS" = "$KEY_ALIAS" ]; then
+                ALIAS_FOUND="true"
+                break
+              fi
+            done
+
+            if [ "$ALIAS_FOUND" != "true" ]; then
+              KEY_ALIAS=""
+            fi
+          fi
+
+          if [ -z "$KEY_ALIAS" ]; then
+            echo "::warning::Configured key alias not found, using first available alias"
+            KEY_ALIAS="${AVAILABLE_ALIASES[0]}"
           fi
 
           if [ -z "$KEY_ALIAS" ]; then
             echo "::error::Release keystore alias missing or invalid"
             exit 1
           fi
+
+          echo "Using keystore alias: $KEY_ALIAS"
 
           KEY_CANDIDATES=("${KEYSTORE_KEY_PASSWORD}" "${KEYSTORE_STORE_PASSWORD}")
           EFFECTIVE_KEY_PASSWORD=""
