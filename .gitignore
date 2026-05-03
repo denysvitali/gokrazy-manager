@@ -25,6 +25,7 @@ coverage/
 /android/*.jks
 /android/*.jks.enc
 /android/app/.cxx
+/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 
 # Signing outputs
 *.keystore
