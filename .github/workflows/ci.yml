@@ -429,12 +429,13 @@ jobs:
               -srcstorepass "$KEYSTORE_STORE_PASSWORD" \
               -srcalias "$KEY_ALIAS" \
               -srckeypass "$KEY_PASSWORD" \
-              -destkeystore /tmp/release-keystore-check.p12 \
+              -destkeystore /tmp/release-keystore.resolved.p12 \
               -deststoretype PKCS12 \
-              -deststorepass changeit \
-              -destkeypass changeit \
+              -deststorepass resolvedpass \
+              -destkeypass resolvedpass \
               -noprompt; then
               EFFECTIVE_KEY_PASSWORD="$KEY_PASSWORD"
+              RESOLVED_KEYSTORE_PASSWORD="resolvedpass"
               break
             fi
           done
@@ -446,7 +447,9 @@ jobs:
 
           {
             echo "KEYSTORE_KEY_ALIAS=$KEY_ALIAS"
-            echo "KEYSTORE_KEY_PASSWORD=$EFFECTIVE_KEY_PASSWORD"
+            echo "KEYSTORE_KEY_PASSWORD=$RESOLVED_KEYSTORE_PASSWORD"
+            echo "KEYSTORE_STORE_PASSWORD=$RESOLVED_KEYSTORE_PASSWORD"
+            echo "KEYSTORE_PATH=/tmp/release-keystore.resolved.p12"
           } >> "$GITHUB_OUTPUT"
         env:
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
@@ -512,8 +515,8 @@ jobs:
         id: build_release
         env: 
           APP_ENV: ${{ steps.flavor.outputs.FLAVOR }}
-          KEYSTORE_PATH: ${{ github.workspace }}/release-keystore.jks
-          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_PATH: ${{ steps.resolve_keystore.outputs.KEYSTORE_PATH }}
+          KEYSTORE_STORE_PASSWORD: ${{ steps.resolve_keystore.outputs.KEYSTORE_STORE_PASSWORD }}
           KEYSTORE_KEY_ALIAS: ${{ steps.resolve_keystore.outputs.KEYSTORE_KEY_ALIAS }}
           KEYSTORE_KEY_PASSWORD: ${{ steps.resolve_keystore.outputs.KEYSTORE_KEY_PASSWORD }}
           GRADLE_OPTS: '-Dorg.gradle.jvmargs=-Xmx4g'
