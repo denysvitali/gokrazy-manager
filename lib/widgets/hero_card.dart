@@ -124,18 +124,21 @@ class HeroHeaderCard extends StatelessWidget {
                     _ActionButton(
                       icon: Icons.sync_rounded,
                       tooltip: 'Refresh',
+                      label: 'Refresh appliance',
                       onPressed: onRefresh,
                     ),
                     const SizedBox(width: 4),
                     _ActionButton(
                       icon: Icons.edit_rounded,
                       tooltip: 'Edit',
+                      label: 'Edit appliance',
                       onPressed: onEdit,
                     ),
                     const SizedBox(width: 4),
                     _ActionButton(
                       icon: Icons.delete_outline_rounded,
                       tooltip: 'Delete',
+                      label: 'Delete appliance',
                       onPressed: onDelete,
                     ),
                   ],
@@ -265,27 +268,34 @@ class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,
     required this.tooltip,
+    required this.label,
     required this.onPressed,
   });
 
   final IconData icon;
   final String tooltip;
+  final String label;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
-      child: Material(
-        color: Colors.white.withValues(alpha: 0.16),
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onPressed,
-          child: SizedBox(
-            width: 40,
-            height: 40,
-            child: Icon(icon, color: Colors.white, size: 18),
+      child: Semantics(
+        button: true,
+        label: label,
+        hint: tooltip,
+        child: Material(
+          color: Colors.white.withValues(alpha: 0.16),
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Icon(icon, color: Colors.white, size: 18),
+            ),
           ),
         ),
       ),
@@ -418,7 +428,7 @@ class _RingMetric extends StatelessWidget {
                   ),
                 ),
                 TweenAnimationBuilder<double>(
-                  duration: AppMotion.slow,
+                  duration: motionDuration(context, AppMotion.slow),
                   curve: Curves.easeOutCubic,
                   tween: Tween<double>(begin: 0, end: clamped),
                   builder: (context, animated, _) => SizedBox(

@@ -5,6 +5,48 @@ import '../theme.dart';
 
 enum StatusTone { success, error, warning, info, primary, neutral }
 
+Duration motionDuration(BuildContext context, Duration duration) {
+  return MediaQuery.of(context).disableAnimations
+      ? Duration.zero
+      : duration;
+}
+
+class AsyncSurface extends StatelessWidget {
+  const AsyncSurface({
+    required this.isLoading,
+    required this.isEmpty,
+    this.isError = false,
+    required this.loading,
+    required this.empty,
+    this.error,
+    required this.child,
+    super.key,
+  });
+
+  final bool isLoading;
+  final bool isEmpty;
+  final bool isError;
+  final Widget loading;
+  final Widget empty;
+  final Widget? error;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return loading;
+    }
+    if (isError) {
+      return error ??
+          const SizedBox.shrink();
+    }
+    if (isEmpty) {
+      return empty;
+    }
+    return child;
+  }
+}
+
 class StatusPill extends StatelessWidget {
   const StatusPill({
     required this.label,
@@ -162,7 +204,7 @@ class MetricRing extends StatelessWidget {
                 ),
               ),
               TweenAnimationBuilder<double>(
-                duration: AppMotion.slow,
+                duration: motionDuration(context, AppMotion.slow),
                 curve: Curves.easeOutCubic,
                 tween: Tween<double>(begin: 0, end: clamped),
                 builder: (context, animated, _) => SizedBox(

@@ -36,7 +36,7 @@ class InstanceStrip extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.s),
         itemBuilder: (context, index) {
           if (index == instances.length) {
-            return _AddTile(onTap: onAdd);
+            return _AddTile(key: const ValueKey('instance-add-tile'), onTap: onAdd);
           }
           final instance = instances[index];
           final selected = selectedId == instance.id;
@@ -44,6 +44,7 @@ class InstanceStrip extends StatelessWidget {
           final error = errors[instance.id];
           final isLoading = loadingIds.contains(instance.id);
           return _InstanceTile(
+            key: ValueKey(instance.id),
             instance: instance,
             status: status,
             error: error,
@@ -99,7 +100,7 @@ class _InstanceTile extends StatelessWidget {
     final baseBg = dark ? AppPalette.slate800 : Colors.white;
 
     return AnimatedContainer(
-      duration: AppMotion.fast,
+      duration: motionDuration(context, AppMotion.fast),
       curve: Curves.easeOutCubic,
       width: 200,
       decoration: BoxDecoration(
@@ -427,7 +428,7 @@ class _SidebarTile extends StatelessWidget {
         : 'Seen ${formatTimeAgo(instance.lastSeen!)}';
 
     return AnimatedContainer(
-      duration: AppMotion.fast,
+      duration: motionDuration(context, AppMotion.fast),
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         color: selected

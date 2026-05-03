@@ -91,19 +91,25 @@ ThemeData buildAppTheme(Brightness brightness, {bool amoledBlack = false}) {
   );
 
   final Color pageBg = dark
-      ? (amoledBlack ? Colors.black : AppPalette.slate900)
-      : AppPalette.slate50;
+      ? (amoledBlack ? Colors.black : scheme.surface)
+      : scheme.surface;
 
   final Color cardBg = dark
       ? (amoledBlack ? const Color(0xFF0A0F1F) : AppPalette.slate800)
       : Colors.white;
 
-  final Color outline = dark
-      ? Colors.white.withValues(alpha: 0.07)
-      : Colors.black.withValues(alpha: 0.06);
+  final Color outline = scheme.outline.withValues(
+    alpha: dark ? 0.34 : 0.12,
+  );
 
-  final base = ThemeData(brightness: brightness);
-  final textTheme = base.textTheme
+  final base = ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+  );
+  final textTheme = ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+  ).textTheme
       .apply(
         bodyColor: dark ? Colors.white : const Color(0xFF111827),
         displayColor: dark ? Colors.white : const Color(0xFF0F172A),
@@ -162,7 +168,7 @@ ThemeData buildAppTheme(Brightness brightness, {bool amoledBlack = false}) {
     ),
     appBarTheme: AppBarTheme(
       backgroundColor: pageBg,
-      foregroundColor: dark ? Colors.white : AppPalette.slate900,
+      foregroundColor: scheme.onSurface,
       centerTitle: false,
       scrolledUnderElevation: 0,
       elevation: 0,
@@ -290,8 +296,8 @@ ThemeData buildAppTheme(Brightness brightness, {bool amoledBlack = false}) {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: dark ? AppPalette.slate800 : AppPalette.slate900,
-      contentTextStyle: const TextStyle(color: Colors.white),
+      backgroundColor: scheme.inverseSurface,
+      contentTextStyle: TextStyle(color: scheme.onInverseSurface),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),

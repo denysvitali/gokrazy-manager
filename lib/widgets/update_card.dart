@@ -87,7 +87,9 @@ class UpdateCard extends StatelessWidget {
                   horizontal: AppSpacing.s,
                   vertical: AppSpacing.xs,
                 ),
-                child: Row(
+                child: Semantics(
+                  liveRegion: true,
+                  child: Row(
                   children: [
                     const Icon(
                       Icons.check_circle_rounded,
@@ -103,6 +105,7 @@ class UpdateCard extends StatelessWidget {
                           ),
                     ),
                   ],
+                  ),
                 ),
               ),
             ),
