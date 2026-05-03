@@ -113,7 +113,7 @@ class GokrazyManagerApp extends StatelessWidget {
           labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           side: BorderSide.none,
-          backgroundColor: WidgetStateProperty.all(colorScheme.surfaceContainerHighest),
+          backgroundColor: colorScheme.surfaceContainerHighest,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -669,7 +669,7 @@ class GokrazyClient {
   void _setHeaders(HttpClientRequest request, {bool keepJsonAccept = true}) {
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
     if (!keepJsonAccept) {
-      request.headers.remove(HttpHeaders.acceptHeader);
+      request.headers.remove(HttpHeaders.acceptHeader, 'application/json');
     }
     request.headers.set(HttpHeaders.contentTypeHeader, 'application/octet-stream');
     request.headers.set(
