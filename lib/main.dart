@@ -1119,7 +1119,7 @@ class _HomePageState extends State<HomePage> {
             selectedIndex: _activeNavIndex,
             onDestinationSelected: _syncRouteTab,
             backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-            destinations: const [
+            destinations: [
               NavigationRailDestination(
                 icon: Icon(Icons.dashboard_outlined),
                 selectedIcon: Icon(Icons.dashboard),
@@ -1156,7 +1156,7 @@ class _HomePageState extends State<HomePage> {
         child: NavigationBar(
           selectedIndex: _activeNavIndex,
           onDestinationSelected: _syncRouteTab,
-          destinations: const [
+          destinations: [
             NavigationBarDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
             NavigationBarDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
           ],
