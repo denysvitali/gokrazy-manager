@@ -406,17 +406,29 @@ jobs:
           echo "FLAVOR=$FLAVOR" >> $GITHUB_OUTPUT
 
       - name: Build Release APK
-        env:
+        id: build_release
+        env: 
           APP_ENV: ${{ steps.flavor.outputs.FLAVOR }}
           KEYSTORE_PATH: ${{ github.workspace }}/release-keystore.jks
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
           GRADLE_OPTS: '-Dorg.gradle.jvmargs=-Xmx4g'
         run: |
+          set -o pipefail
           flutter build apk --release --no-pub \
             --target-platform android-arm64 \
             --build-number ${{ steps.build_meta.outputs.BUILD_NUMBER }} \
-            --dart-define=SENTRY_RELEASE=gokrazy_manager@0.1.0+${{ steps.build_meta.outputs.BUILD_NUMBER }}
+            --dart-define=SENTRY_RELEASE=gokrazy_manager@0.1.0+${{ steps.build_meta.outputs.BUILD_NUMBER }} \
+            --verbose 2>&1 | tee build-release.log
+
+      - name: Upload release build log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-build-log-${{ steps.flavor.outputs.FLAVOR }}-b${{ steps.build_meta.outputs.BUILD_NUMBER }}
+          path: build-release.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload debug symbols to Sentry
         if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
