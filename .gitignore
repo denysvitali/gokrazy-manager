@@ -1,0 +1,36 @@
+# Misc
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.idea/
+*.iml
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+coverage/
+
+# Android
+/android/app/debug
+/android/app/profile
+/android/app/release
+/android/local.properties
+/android/key.properties
+/android/*.jks
+/android/*.jks.enc
+/android/app/.cxx
+
+# Signing outputs
+*.keystore
+*.jks
+*.jks.enc
+
+# Env
+.env
+.envrc

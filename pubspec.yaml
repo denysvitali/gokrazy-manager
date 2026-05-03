@@ -1,0 +1,25 @@
+name: gokrazy_manager
+description: Android companion app for managing multiple gokrazy appliances.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  convert: ^3.1.2
+  crypto: ^3.0.6
+  cupertino_icons: ^1.0.8
+  file_picker: ^10.3.7
+  flutter:
+    sdk: flutter
+  flutter_secure_storage: ^10.0.0-beta.4
+  shared_preferences: ^2.5.3
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
