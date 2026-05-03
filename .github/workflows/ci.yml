@@ -372,6 +372,18 @@ jobs:
           )
 
           if [ "${#AVAILABLE_ALIASES[@]}" -eq 0 ]; then
+            KEYSTORE_RFC_LIST="$(keytool -list \
+              -rfc \
+              -keystore release-keystore.jks \
+              -storepass "$KEYSTORE_STORE_PASSWORD" \
+              2>&1 || true)"
+            mapfile -t AVAILABLE_ALIASES < <(
+              printf '%s\n' "$KEYSTORE_RFC_LIST" \
+              | sed -nE "s/^[[:space:]]*[Aa]lias:[[:space:]]*([^[:space:]]+).*/\\1/p"
+            )
+          fi
+
+          if [ "${#AVAILABLE_ALIASES[@]}" -eq 0 ]; then
             echo "::error::Could not parse keystore aliases from keytool output"
             echo "::warning::Keytool output head (redacted):"
             printf '%s\n' "$KEYSTORE_LIST" | sed -n '1,6p' | sed 's/\x1b\\[[0-9;]*m//g'
@@ -399,10 +411,6 @@ jobs:
           fi
 
           if [ -z "$KEY_ALIAS" ]; then
-            if [ "${#AVAILABLE_ALIASES[@]}" -eq 0 ]; then
-              echo "::error::Could not parse keystore aliases from keytool output"
-              exit 1
-            fi
             echo "::error::Release keystore alias missing or invalid"
             exit 1
           fi
