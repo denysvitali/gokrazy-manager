@@ -1876,49 +1876,55 @@ class ServicesCard extends StatelessWidget {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            FilledButton.tonal(
-                              tooltip: service.stopped ? 'Start' : 'Stop',
-                              onPressed: () => service.stopped ? onStart(service) : onStop(service),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(service.stopped ? Icons.play_arrow : Icons.stop, size: 18),
-                                  const SizedBox(width: 6),
-                                  Text(service.stopped ? 'Start' : 'Stop'),
-                                ],
-                              ),
-                            ),
-                            FilledButton.tonal(
-                              tooltip: 'Restart',
-                              onPressed: () => onRestart(service),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.refresh, size: 18),
-                                  SizedBox(width: 6),
-                                  Text('Restart'),
-                                ],
+                            Tooltip(
+                              message: service.stopped ? 'Start' : 'Stop',
+                              child: FilledButton.tonal(
+                                onPressed: () => service.stopped ? onStart(service) : onStop(service),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(service.stopped ? Icons.play_arrow : Icons.stop, size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(service.stopped ? 'Start' : 'Stop'),
+                                  ],
+                                ),
                               ),
                             ),
-                            FilledButton.tonal(
-                              tooltip: 'Logs',
-                              onPressed: () => onLogs(service),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            Tooltip(
+                              message: 'Restart',
+                              child: FilledButton.tonal(
+                                onPressed: () => onRestart(service),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.refresh, size: 18),
+                                    SizedBox(width: 6),
+                                    Text('Restart'),
+                                  ],
+                                ),
                               ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.terminal, size: 18),
-                                  SizedBox(width: 6),
-                                  Text('Logs'),
-                                ],
+                            ),
+                            Tooltip(
+                              message: 'Logs',
+                              child: FilledButton.tonal(
+                                onPressed: () => onLogs(service),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.terminal, size: 18),
+                                    SizedBox(width: 6),
+                                    Text('Logs'),
+                                  ],
+                                ),
                               ),
                             ),
                             if (service.args.isNotEmpty)
