@@ -302,7 +302,7 @@ jobs:
         shell: bash
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::Keystore not configured. Set KEYSTORE_BASE64, KEYSTORE_STORE_PASSWORD, KEYSTORE_KEY_PASSWORD."
+            echo "::error::Keystore not configured. Set KEYSTORE_BASE64 and KEYSTORE_STORE_PASSWORD."
             exit 1
           fi
         env:
@@ -329,27 +329,59 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
-      - name: Validate signing keystore
-        id: validate_keystore
+      - name: Resolve signing keystore
+        id: resolve_keystore
         shell: bash
         run: |
-          EFFECTIVE_KEY_PASSWORD="${KEYSTORE_KEY_PASSWORD:-$KEYSTORE_STORE_PASSWORD}"
-          if ! keytool -importkeystore \
-            -srckeystore release-keystore.jks \
-            -srcstorepass "$KEYSTORE_STORE_PASSWORD" \
-            -srcalias "$KEYSTORE_KEY_ALIAS" \
-            -srckeypass "$EFFECTIVE_KEY_PASSWORD" \
-            -destkeystore /tmp/release-keystore-check.p12 \
-            -deststoretype PKCS12 \
-            -deststorepass changeit \
-            -destkeypass changeit \
-            -noprompt; then
+          KEY_ALIAS="$KEYSTORE_KEY_ALIAS"
+          if [ -z "$KEY_ALIAS" ]; then
+            KEY_ALIAS="$(keytool -list \
+              -keystore release-keystore.jks \
+              -storepass "$KEYSTORE_STORE_PASSWORD" \
+              2>/dev/null \
+              | awk 'match($0, /^Alias name: (.*)$/, a) { print a[1]; exit }')"
+          fi
+
+          if [ -z "$KEY_ALIAS" ]; then
+            echo "::error::Release keystore alias missing or invalid"
+            exit 1
+          fi
+
+          KEY_CANDIDATES=("${KEYSTORE_KEY_PASSWORD}" "${KEYSTORE_STORE_PASSWORD}")
+          EFFECTIVE_KEY_PASSWORD=""
+          for KEY_PASSWORD in "${KEY_CANDIDATES[@]}"; do
+            if [ -z "$KEY_PASSWORD" ]; then
+              continue
+            fi
+
+            if keytool -importkeystore \
+              -srckeystore release-keystore.jks \
+              -srcstorepass "$KEYSTORE_STORE_PASSWORD" \
+              -srcalias "$KEY_ALIAS" \
+              -srckeypass "$KEY_PASSWORD" \
+              -destkeystore /tmp/release-keystore-check.p12 \
+              -deststoretype PKCS12 \
+              -deststorepass changeit \
+              -destkeypass changeit \
+              -noprompt; then
+              EFFECTIVE_KEY_PASSWORD="$KEY_PASSWORD"
+              break
+            fi
+          done
+
+          if [ -z "$EFFECTIVE_KEY_PASSWORD" ]; then
             echo "::error::Release keystore secrets are invalid"
             exit 1
           fi
+
+          {
+            echo "KEYSTORE_KEY_ALIAS=$KEY_ALIAS"
+            echo "KEYSTORE_KEY_PASSWORD=$EFFECTIVE_KEY_PASSWORD"
+          } >> "$GITHUB_OUTPUT"
         env:
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_KEY_ALIAS: ${{ env.KEYSTORE_KEY_ALIAS }}
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -412,11 +444,10 @@ jobs:
           APP_ENV: ${{ steps.flavor.outputs.FLAVOR }}
           KEYSTORE_PATH: ${{ github.workspace }}/release-keystore.jks
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_KEY_ALIAS: ${{ steps.resolve_keystore.outputs.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ steps.resolve_keystore.outputs.KEYSTORE_KEY_PASSWORD }}
           GRADLE_OPTS: '-Dorg.gradle.jvmargs=-Xmx4g'
         run: |
-          EFFECTIVE_KEY_PASSWORD="${KEYSTORE_KEY_PASSWORD:-$KEYSTORE_STORE_PASSWORD}"
-          export KEYSTORE_KEY_PASSWORD="$EFFECTIVE_KEY_PASSWORD"
           set -o pipefail
           flutter build apk --release --no-pub \
             --target-platform android-arm64 \
