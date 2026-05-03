@@ -599,10 +599,12 @@ class _HomeShellState extends State<HomeShell> {
       allowedExtensions: const ['squashfs', 'gz', 'img', 'bin'],
       withReadStream: true,
     );
-    final file = picked?.files.single;
-    if (file == null) {
+    final files = picked?.files ?? const <PlatformFile>[];
+    if (files.isEmpty) {
+      _showSnack('No file selected');
       return;
     }
+    final file = files.first;
     final stream = file.readStream ??
         (file.path == null ? null : File(file.path!).openRead());
     if (stream == null) {
@@ -691,6 +693,11 @@ class _HomeShellState extends State<HomeShell> {
         );
         _showSnack('Certificate trusted. Try uploading again.');
       }
+      if (mounted) {
+        setState(() => _uploadByInstance.remove(instance.id));
+      }
+    } on StateError catch (error) {
+      _showSnack(error.message);
       if (mounted) {
         setState(() => _uploadByInstance.remove(instance.id));
       }

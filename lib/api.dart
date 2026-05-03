@@ -202,12 +202,23 @@ class GokrazyClient {
       });
 
       await request.addStream(hashed);
+      await input.close();
       final response = await request.close();
       final body = (await response.transform(utf8.decoder).join()).trim();
       if (response.statusCode != HttpStatus.ok) {
         throw HttpException('HTTP ${response.statusCode}: $body');
       }
-      final localHash = output.events.single.toString();
+      final localHashes = output.events.toList();
+      if (localHashes.isEmpty) {
+        throw StateError(
+            'No local hash emitted while hashing upload stream. '
+            'This usually means the upload stream was interrupted.');
+      }
+      if (localHashes.length != 1) {
+        throw StateError(
+            'Expected exactly one local hash from upload stream, got ${localHashes.length}.');
+      }
+      final localHash = localHashes.single.toString();
       if (body != localHash) {
         throw StateError(
             'Checksum mismatch: device returned $body, sent $localHash');
