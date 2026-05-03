@@ -153,12 +153,10 @@ jobs:
     timeout-minutes: 30
     env:
       KEYSTORE_KEY_ALIAS: upload
-    # Run on push/PR events (but not tags), or workflow_dispatch with debug or both selected
+    # Run on push/PR events (but not tags), or workflow_dispatch with debug or both selected.
     if: |
       (github.event_name != 'workflow_dispatch' &&
-       !startsWith(github.ref, 'refs/tags/v') &&
-       github.ref != 'refs/heads/main' &&
-       github.ref != 'refs/heads/master') ||
+       !startsWith(github.ref, 'refs/tags/v')) ||
       github.event.inputs.build_type == 'debug' ||
       github.event.inputs.build_type == 'both'
 
