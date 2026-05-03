@@ -1734,7 +1734,6 @@ class _InstanceDetailState extends State<InstanceDetail> {
             setState(() => _uploadProgress = sent / total);
           }
         },
-        decompress: isGzipped,
       );
       if (mounted) {
         setState(() => _uploadMessage = 'Upload verified');
