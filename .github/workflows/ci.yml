@@ -333,11 +333,12 @@ jobs:
         id: validate_keystore
         shell: bash
         run: |
+          EFFECTIVE_KEY_PASSWORD="${KEYSTORE_KEY_PASSWORD:-$KEYSTORE_STORE_PASSWORD}"
           if ! keytool -importkeystore \
             -srckeystore release-keystore.jks \
             -srcstorepass "$KEYSTORE_STORE_PASSWORD" \
             -srcalias "$KEYSTORE_KEY_ALIAS" \
-            -srckeypass "$KEYSTORE_KEY_PASSWORD" \
+            -srckeypass "$EFFECTIVE_KEY_PASSWORD" \
             -destkeystore /tmp/release-keystore-check.p12 \
             -deststoretype PKCS12 \
             -deststorepass changeit \
@@ -414,6 +415,8 @@ jobs:
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
           GRADLE_OPTS: '-Dorg.gradle.jvmargs=-Xmx4g'
         run: |
+          EFFECTIVE_KEY_PASSWORD="${KEYSTORE_KEY_PASSWORD:-$KEYSTORE_STORE_PASSWORD}"
+          export KEYSTORE_KEY_PASSWORD="$EFFECTIVE_KEY_PASSWORD"
           set -o pipefail
           flutter build apk --release --no-pub \
             --target-platform android-arm64 \
