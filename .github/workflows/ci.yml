@@ -281,10 +281,12 @@ jobs:
     # Build a release APK for every commit pushed to a tracked branch, manual
     # release builds, and version tags.
     if: |
-      github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' &&
        (github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both')) ||
-      startsWith(github.ref, 'refs/tags/v')
+      ((github.event_name == 'push' || startsWith(github.ref, 'refs/tags/v')) &&
+       secrets.KEYSTORE_BASE64 != '' &&
+       secrets.KEYSTORE_STORE_PASSWORD != '' &&
+       secrets.KEYSTORE_KEY_PASSWORD != '')
 
     steps:
       - name: Checkout repository
