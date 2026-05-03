@@ -281,12 +281,10 @@ jobs:
     # Build a release APK for every commit pushed to a tracked branch, manual
     # release builds, and version tags.
     if: |
+      github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' &&
        (github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both')) ||
-      ((github.event_name == 'push' || startsWith(github.ref, 'refs/tags/v')) &&
-       secrets.KEYSTORE_BASE64 != '' &&
-       secrets.KEYSTORE_STORE_PASSWORD != '' &&
-       secrets.KEYSTORE_KEY_PASSWORD != '')
+      startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Checkout repository
@@ -303,12 +301,16 @@ jobs:
         id: check_keystore
         shell: bash
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::Keystore not configured. Set KEYSTORE_BASE64 and KEYSTORE_STORE_PASSWORD."
-            exit 1
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_STORE_PASSWORD" ] || [ -z "$KEYSTORE_KEY_PASSWORD" ]; then
+            echo "ENABLED=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release build skipped. KEYSTORE_BASE64, KEYSTORE_STORE_PASSWORD, and KEYSTORE_KEY_PASSWORD are required."
+            exit 0
           fi
+          echo "ENABLED=true" >> "$GITHUB_OUTPUT"
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
       - name: Free disk space
         shell: bash
@@ -325,6 +327,7 @@ jobs:
           df -h
 
       - name: Create keystore
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         shell: bash
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > release-keystore.jks
@@ -332,6 +335,7 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Resolve signing keystore
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         id: resolve_keystore
         shell: bash
         run: |
@@ -459,24 +463,28 @@ jobs:
           KEYSTORE_KEY_ALIAS: ${{ env.KEYSTORE_KEY_ALIAS }}
 
       - name: Setup Java
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
 
       - name: Setup Flutter
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: 3.38.7
 
       - name: Setup Android NDK
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKMANAGER" --licenses || true
           "$SDKMANAGER" "ndk;28.2.13676358"
 
       - name: Cache pub dependencies
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         uses: actions/cache@v5
         with:
           path: ~/.pub-cache
@@ -485,6 +493,7 @@ jobs:
             ${{ runner.os }}-pub-
 
       - name: Cache Gradle
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         uses: actions/cache@v5
         with:
           path: |
@@ -495,9 +504,11 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Get dependencies
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         run: flutter pub get
 
       - name: Stabilize Kotlin compiler
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         run: |
           mkdir -p ~/.gradle
           {
@@ -505,6 +516,7 @@ jobs:
           } >> ~/.gradle/gradle.properties
 
       - name: Determine flavor
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         id: flavor
         run: |
           FLAVOR="${{ github.event.inputs.flavor }}"
@@ -515,6 +527,7 @@ jobs:
 
       - name: Build Release APK
         id: build_release
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         env: 
           APP_ENV: ${{ steps.flavor.outputs.FLAVOR }}
           KEYSTORE_PATH: ${{ steps.resolve_keystore.outputs.KEYSTORE_PATH }}
@@ -531,7 +544,7 @@ jobs:
             --verbose 2>&1 | tee build-release.log
 
       - name: Upload release build log
-        if: always()
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' && always() }}
         uses: actions/upload-artifact@v7
         with:
           name: release-build-log-${{ steps.flavor.outputs.FLAVOR }}-b${{ steps.build_meta.outputs.BUILD_NUMBER }}
@@ -540,7 +553,7 @@ jobs:
           retention-days: 7
 
       - name: Upload debug symbols to Sentry
-        if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' && env.SENTRY_AUTH_TOKEN != '' }}
         run: |
           flutter pub run sentry_dart_plugin
         env:
@@ -549,6 +562,7 @@ jobs:
           SENTRY_RELEASE: gokrazy_manager@0.1.0+${{ steps.build_meta.outputs.BUILD_NUMBER }}
 
       - name: Upload Release APK
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: gokrazy-manager-release-${{ steps.flavor.outputs.FLAVOR }}-b${{ steps.build_meta.outputs.BUILD_NUMBER }}
@@ -556,6 +570,7 @@ jobs:
           retention-days: 14
 
       - name: Determine release version
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         id: release_version
         run: |
           SEMVER=$(grep '^version:' pubspec.yaml | sed 's/version: *//' | cut -d'+' -f1 | tr -d ' ')
@@ -567,7 +582,7 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ steps.check_keystore.outputs.ENABLED == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_version.outputs.RELEASE_TAG }}
