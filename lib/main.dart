@@ -19,33 +19,61 @@ class GokrazyManagerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const seed = Color(0xff0f766e);
+    final surface = ColorScheme.fromSeed(seedColor: seed).surface;
     return MaterialApp(
       title: 'Gokrazy Manager',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: seed),
-        scaffoldBackgroundColor: const Color(0xfff5f7fa),
-        cardColor: Colors.white,
+        scaffoldBackgroundColor: Color.lerp(surface, Colors.white, 0.25),
+        cardColor: surface,
         visualDensity: VisualDensity.adaptivePlatformDensity,
         cardTheme: CardThemeData(
           elevation: 0,
-          color: Colors.white,
+          color: surface,
           margin: EdgeInsets.zero,
-          shadowColor: Colors.black12,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.blueGrey.shade100),
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
+          foregroundColor: const Color(0xff0f172a),
+          centerTitle: false,
+          scrolledUnderElevation: 0,
+          titleTextStyle: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        iconButtonTheme: const IconButtonThemeData(
+          style: ButtonStyle(
+            shape: WidgetStatePropertyAll(
+              CircleBorder(),
+            ),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(10)),
+            ),
           ),
         ),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          filled: true,
+          fillColor: Colors.white,
         ),
+        chipTheme: const ChipThemeData(
+          labelStyle: TextStyle(fontSize: 12),
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        ),
+        dividerTheme: const DividerThemeData(space: 0, thickness: 1),
         textTheme: const TextTheme(
           titleLarge: TextStyle(fontWeight: FontWeight.w700),
           titleMedium: TextStyle(fontWeight: FontWeight.w600),
@@ -808,18 +836,26 @@ class _HomePageState extends State<HomePage> {
         .where((entry) => entry.id == _selectedId)
         .firstOrNull;
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openEditor(),
+        icon: const Icon(Icons.add),
+        label: const Text('Add instance'),
+        tooltip: 'Add instance',
+      ),
       appBar: AppBar(
         title: const Text('Gokrazy Manager'),
+        leading: _instances.isNotEmpty
+            ? IconButton(
+                tooltip: 'Refresh selected',
+                onPressed: selected == null ? null : () => _refresh(selected),
+                icon: const Icon(Icons.refresh_rounded),
+              )
+            : null,
         actions: [
           IconButton(
             tooltip: 'Refresh',
             onPressed: _refreshAll,
             icon: const Icon(Icons.refresh),
-          ),
-          IconButton(
-            tooltip: 'Add',
-            onPressed: () => _openEditor(),
-            icon: const Icon(Icons.add),
           ),
         ],
       ),
@@ -830,13 +866,16 @@ class _HomePageState extends State<HomePage> {
               : LayoutBuilder(
                   builder: (context, constraints) {
                     final wide = constraints.maxWidth >= 820;
-                    final list = InstanceList(
-                      instances: _instances,
-                      statuses: _statuses,
-                      errors: _errors,
-                      selectedId: _selectedId,
-                      onSelect: (id) => setState(() => _selectedId = id),
-                      onRefresh: _refresh,
+                    final list = Card(
+                      margin: const EdgeInsets.only(left: 12, right: 12, top: 12, bottom: 12),
+                      child: InstanceList(
+                        instances: _instances,
+                        statuses: _statuses,
+                        errors: _errors,
+                        selectedId: _selectedId,
+                        onSelect: (id) => setState(() => _selectedId = id),
+                        onRefresh: _refresh,
+                      ),
                     );
                     final detail = selected == null
                         ? const SizedBox.shrink()
@@ -859,7 +898,7 @@ class _HomePageState extends State<HomePage> {
                     if (!wide) {
                       return Column(
                         children: [
-                          SizedBox(height: 180, child: list),
+                          SizedBox(height: 220, child: list),
                           const Divider(height: 1),
                           Expanded(child: detail),
                         ],
@@ -901,6 +940,7 @@ class _InstanceEditorState extends State<InstanceEditor> {
   late final TextEditingController _username;
   late final TextEditingController _password;
   bool _saving = false;
+  bool _showPassword = false;
 
   @override
   void initState() {
@@ -1000,12 +1040,25 @@ class _InstanceEditorState extends State<InstanceEditor> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _password,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Password',
                 prefixIcon: Icon(Icons.key_outlined),
+                suffixIcon: IconButton(
+                  tooltip: _showPassword ? 'Hide password' : 'Show password',
+                  onPressed: () => setState(() => _showPassword = !_showPassword),
+                  icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
+                ),
               ),
-              obscureText: true,
+              obscureText: !_showPassword,
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Credentials are encrypted by platform secure storage.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -1037,17 +1090,37 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.router_outlined, size: 72, color: Colors.blueGrey.shade300),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: onAdd,
-            icon: const Icon(Icons.add),
-            label: const Text('Add instance'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.cloud_queue_rounded, size: 56, color: Colors.teal.shade700),
+                const SizedBox(height: 16),
+                Text(
+                  'No Gokrazy instances yet',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Add an appliance URL and credentials to monitor services, logs, and updates in one place.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add instance'),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1073,58 +1146,57 @@ class InstanceList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: instances.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final instance = instances[index];
-        final status = statuses[instance.id];
-        final error = errors[instance.id];
-        final selected = selectedId == instance.id;
-        return Card(
-          color: selected ? Theme.of(context).colorScheme.primaryContainer : Colors.white,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: () => onSelect(instance.id),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  StatusDot(ok: status != null && error == null),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          instance.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          status == null
-                              ? instance.baseUrl
-                              : '${status.runningServices}/${status.services.length} services',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+          child: Text(
+            'Instances',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            itemCount: instances.length,
+            itemBuilder: (context, index) {
+              final instance = instances[index];
+              final status = statuses[instance.id];
+              final error = errors[instance.id];
+              final selected = selectedId == instance.id;
+              final isHealthy = status != null && error == null;
+              return Card(
+                color: selected
+                    ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.28)
+                    : null,
+                child: ListTile(
+                  onTap: () => onSelect(instance.id),
+                  leading: StatusDot(ok: isHealthy),
+                  title: Text(
+                    instance.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  IconButton(
+                  subtitle: status == null
+                      ? Text(instance.baseUrl, maxLines: 1, overflow: TextOverflow.ellipsis)
+                      : Text(
+                          '${status.runningServices}/${status.services.length} services running',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  trailing: IconButton(
                     tooltip: 'Refresh',
                     onPressed: () => onRefresh(instance),
-                    icon: const Icon(Icons.sync),
+                    icon: const Icon(Icons.sync_rounded, size: 20),
                   ),
-                ],
-              ),
-            ),
+                  selected: selected,
+                ),
+              );
+            },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 }
@@ -1287,7 +1359,7 @@ class _InstanceDetailState extends State<InstanceDetail> {
           minChildSize: 0.4,
           maxChildSize: 0.95,
           expand: false,
-          builder: (_, controller) {
+                builder: (_, controller) {
             return Padding(
               padding: const EdgeInsets.all(16),
               child: StreamBuilder<String>(
@@ -1296,12 +1368,24 @@ class _InstanceDetailState extends State<InstanceDetail> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${service.name} logs', style: Theme.of(context).textTheme.titleMedium),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text('${service.name} logs',
+                                style: Theme.of(context).textTheme.titleMedium),
+                          ),
+                          IconButton(
+                            tooltip: 'Close',
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 8),
                       Expanded(
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.blueGrey.shade200),
+                            color: const Color(0xff0b1021),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Padding(
@@ -1310,20 +1394,16 @@ class _InstanceDetailState extends State<InstanceDetail> {
                               controller: controller,
                               child: SelectableText(
                                 snapshot.data ?? 'Connecting...',
-                                style: const TextStyle(fontFamily: 'monospace'),
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Close'),
-                        ),
-                      ),
                     ],
                   );
                 },
@@ -1431,6 +1511,9 @@ class _InstanceHeaderCard extends StatelessWidget {
     final runningServices = status?.services.where((service) => service.running).length ?? 0;
     final totalServices = status?.services.length ?? 0;
     final stopped = hasError || status == null;
+    final lastSeenText = instance.lastSeen == null
+        ? 'Never checked'
+        : 'Last checked ${_timeAgo(instance.lastSeen!)}';
 
     return Card(
       child: Padding(
@@ -1447,6 +1530,8 @@ class _InstanceHeaderCard extends StatelessWidget {
                       Text(instance.name, style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 4),
                       Text(instance.baseUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
+                      Text(lastSeenText, style: Theme.of(context).textTheme.bodySmall),
                     ],
                   ),
                 ),
@@ -1478,16 +1563,22 @@ class _InstanceHeaderCard extends StatelessWidget {
                   color: stopped ? Colors.red : Colors.green,
                 ),
                 if (status != null)
-                  _StatusChip(
-                    icon: Icons.miscellaneous_services,
-                    label: 'Services $runningServices/$totalServices',
-                    color: Colors.blueGrey,
-                  ),
+                _StatusChip(
+                  icon: Icons.miscellaneous_services,
+                  label: 'Services $runningServices/$totalServices',
+                  color: Colors.blueGrey,
+                ),
                 if (status?.hostname != null && status!.hostname!.isNotEmpty)
                   _StatusChip(
                     icon: Icons.computer,
                     label: status!.hostname!,
                     color: Colors.indigo,
+                  ),
+                if (status?.kernel != null && status!.kernel!.isNotEmpty)
+                  _StatusChip(
+                    icon: Icons.memory_outlined,
+                    label: status!.kernel!,
+                    color: Colors.orange.shade700,
                   ),
               ],
             ),
@@ -1516,9 +1607,24 @@ class _StatusChip extends StatelessWidget {
       label: Text(label),
       side: BorderSide(color: color.withValues(alpha: 0.35)),
       visualDensity: VisualDensity.compact,
-      labelStyle: TextStyle(color: Colors.black87),
+      labelStyle: TextStyle(color: color),
     );
   }
+}
+
+String _timeAgo(DateTime value) {
+  final now = DateTime.now();
+  final diff = now.difference(value);
+  if (diff.inSeconds < 60) {
+    return '${diff.inSeconds}s ago';
+  }
+  if (diff.inMinutes < 60) {
+    return '${diff.inMinutes}m ago';
+  }
+  if (diff.inHours < 24) {
+    return '${diff.inHours}h ago';
+  }
+  return '${diff.inDays}d ago';
 }
 
 class OverviewCard extends StatelessWidget {
@@ -1534,8 +1640,15 @@ class OverviewCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Overview', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text('Overview', style: Theme.of(context).textTheme.titleMedium),
+                const Spacer(),
+                if (status.publicAddrs.isNotEmpty || status.privateAddrs.isNotEmpty)
+                  const Icon(Icons.route_outlined, size: 18),
+              ],
+            ),
+            const SizedBox(height: 10),
             InfoRow(icon: Icons.memory, label: 'Model', value: status.model ?? 'Unknown'),
             InfoRow(icon: Icons.terminal, label: 'Kernel', value: status.kernel ?? 'Unknown'),
             InfoRow(icon: Icons.badge_outlined, label: 'Host', value: status.hostname ?? 'Unknown'),
@@ -1547,11 +1660,31 @@ class OverviewCard extends StatelessWidget {
               ),
             if (status.sbomHash != null)
               InfoRow(icon: Icons.fingerprint, label: 'SBOM', value: status.sbomHash!),
+            if (status.privateAddrs.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text('Private addresses', style: Theme.of(context).textTheme.labelLarge),
+            ],
+            if (status.privateAddrs.isNotEmpty)
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ...status.privateAddrs.map(
+                    (addr) => Chip(
+                      avatar: const Icon(Icons.lan, size: 16),
+                      label: Text(addr),
+                    ),
+                  ),
+                ],
+              ),
+            if (status.publicAddrs.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text('Public addresses', style: Theme.of(context).textTheme.labelLarge),
+            ],
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                ...status.privateAddrs.map((addr) => Chip(label: Text(addr))),
                 ...status.publicAddrs.map((addr) => Chip(label: Text(addr))),
               ],
             ),
@@ -1581,12 +1714,16 @@ class ResourceCard extends StatelessWidget {
           children: [
             Text('Resources', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 14),
+            if (permTotal > 0)
+              Text('Persistent data ${_percent(permUsed, permTotal)}', style: Theme.of(context).textTheme.bodySmall),
             Meter(
               label: 'Persistent data',
               used: permUsed,
               total: permTotal,
             ),
             const SizedBox(height: 14),
+            if (memTotal > 0)
+              Text('Memory ${_percent(memUsed, memTotal)}', style: Theme.of(context).textTheme.bodySmall),
             Meter(
               label: 'Memory',
               used: memUsed,
@@ -1636,6 +1773,7 @@ class FlashCard extends StatelessWidget {
               const SizedBox(height: 12),
             ],
             Wrap(
+              alignment: WrapAlignment.spaceBetween,
               spacing: 8,
               runSpacing: 8,
               children: [
@@ -1686,16 +1824,31 @@ class ServicesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final serviceCount = services.length;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Services', style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              children: [
+                Text('Services', style: Theme.of(context).textTheme.titleMedium),
+                const Spacer(),
+                if (serviceCount > 0)
+                  Text(
+                    '$serviceCount',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 8),
-            if (services.isEmpty)
+            if (services.isEmpty) ...[
+              const SizedBox(height: 4),
               Text('No services found', style: Theme.of(context).textTheme.bodyMedium),
+            ],
             ...services.map(
               (service) => Padding(
                 padding: const EdgeInsets.only(top: 10),
@@ -1723,20 +1876,50 @@ class ServicesCard extends StatelessWidget {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            IconButton.filledTonal(
+                            FilledButton.tonal(
                               tooltip: service.stopped ? 'Start' : 'Stop',
                               onPressed: () => service.stopped ? onStart(service) : onStop(service),
-                              icon: service.stopped ? const Icon(Icons.play_arrow) : const Icon(Icons.stop),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(service.stopped ? Icons.play_arrow : Icons.stop, size: 18),
+                                  const SizedBox(width: 6),
+                                  Text(service.stopped ? 'Start' : 'Stop'),
+                                ],
+                              ),
                             ),
-                            IconButton.filledTonal(
+                            FilledButton.tonal(
                               tooltip: 'Restart',
                               onPressed: () => onRestart(service),
-                              icon: const Icon(Icons.refresh),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.refresh, size: 18),
+                                  SizedBox(width: 6),
+                                  Text('Restart'),
+                                ],
+                              ),
                             ),
-                            IconButton.filledTonal(
+                            FilledButton.tonal(
                               tooltip: 'Logs',
                               onPressed: () => onLogs(service),
-                              icon: const Icon(Icons.terminal),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.terminal, size: 18),
+                                  SizedBox(width: 6),
+                                  Text('Logs'),
+                                ],
+                              ),
                             ),
                             if (service.args.isNotEmpty)
                               OutlinedButton.icon(
@@ -1898,6 +2081,14 @@ String _bytes(int bytes) {
     unit++;
   }
   return '${value.toStringAsFixed(value >= 10 ? 0 : 1)} ${units[unit]}';
+}
+
+String _percent(int used, int total) {
+  if (total <= 0) {
+    return '0%';
+  }
+  final value = (used / total * 100).clamp(0.0, 100.0);
+  return '${value.toStringAsFixed(value >= 10 ? 0 : 1)}%';
 }
 
 extension _FirstOrNull<T> on Iterable<T> {
