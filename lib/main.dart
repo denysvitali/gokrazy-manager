@@ -18,65 +18,145 @@ class GokrazyManagerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const seed = Color(0xff0f766e);
-    final surface = ColorScheme.fromSeed(seedColor: seed).surface;
+    const seed = Color(0xff0f4f67);
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: Brightness.dark,
+    );
+    final panel = const Color(0xff101a2d).withValues(alpha: 0.82);
+    const layer = Color(0xff1b2842);
+    const border = Color(0xff243858);
     return MaterialApp(
       title: 'Gokrazy Manager',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: seed),
-        scaffoldBackgroundColor: Color.lerp(surface, Colors.white, 0.25),
-        cardColor: surface,
+        colorScheme: colorScheme,
         visualDensity: VisualDensity.adaptivePlatformDensity,
+        scaffoldBackgroundColor: Colors.transparent,
         cardTheme: CardThemeData(
+          color: panel,
           elevation: 0,
-          color: surface,
+          surfaceTintColor: colorScheme.primary.withValues(alpha: 0.08),
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
         appBarTheme: AppBarTheme(
           backgroundColor: Colors.transparent,
-          foregroundColor: const Color(0xff0f172a),
+          foregroundColor: colorScheme.onSurface,
           centerTitle: false,
           scrolledUnderElevation: 0,
-          titleTextStyle: const TextStyle(
-            fontSize: 20,
+          elevation: 0,
+          titleTextStyle: TextStyle(
+            fontSize: 21,
             fontWeight: FontWeight.w700,
+            color: colorScheme.onSurface,
+            letterSpacing: -0.3,
           ),
         ),
         iconButtonTheme: const IconButtonThemeData(
           style: ButtonStyle(
             shape: WidgetStatePropertyAll(
-              CircleBorder(),
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
             ),
+            padding: WidgetStatePropertyAll(EdgeInsets.all(10)),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            elevation: 0,
+            backgroundColor: colorScheme.primary,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(10)),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
             ),
+            textStyle: const TextStyle(fontWeight: FontWeight.w600),
+            minimumSize: const Size(0, 46),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: colorScheme.onSurface,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+            textStyle: const TextStyle(fontWeight: FontWeight.w600),
+            minimumSize: const Size(0, 46),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
           filled: true,
-          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: border.withValues(alpha: 0.5)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: colorScheme.primary, width: 1.3),
+          ),
+          labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+          hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+          fillColor: layer,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        chipTheme: const ChipThemeData(
-          labelStyle: TextStyle(fontSize: 12),
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        chipTheme: ChipThemeData(
+          color: WidgetStateProperty.resolveWith((_) => panel),
+          labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          side: BorderSide.none,
+          backgroundColor: WidgetStateProperty.all(colorScheme.surfaceContainerHighest),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
         ),
-        dividerTheme: const DividerThemeData(space: 0, thickness: 1),
-        textTheme: const TextTheme(
-          titleLarge: TextStyle(fontWeight: FontWeight.w700),
-          titleMedium: TextStyle(fontWeight: FontWeight.w600),
+        dividerTheme: DividerThemeData(
+          color: border.withValues(alpha: 0.7),
+          space: 0,
+          thickness: 1,
+        ),
+        textTheme: TextTheme(
+          titleLarge: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+          titleMedium: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          titleSmall: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurfaceVariant,
+            fontSize: 13,
+          ),
+          bodyMedium: TextStyle(
+            fontSize: 14.5,
+            color: colorScheme.onSurfaceVariant,
+            height: 1.4,
+          ),
+          bodyLarge: const TextStyle(height: 1.4),
+          labelLarge: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurfaceVariant,
+            letterSpacing: 0.2,
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
         ),
       ),
       home: const HomePage(),
@@ -835,84 +915,108 @@ class _HomePageState extends State<HomePage> {
     final selected = _instances
         .where((entry) => entry.id == _selectedId)
         .firstOrNull;
-    return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openEditor(),
-        icon: const Icon(Icons.add),
-        label: const Text('Add instance'),
-        tooltip: 'Add instance',
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xff081226),
+            Color(0xff0f1d38),
+            Color(0xff0b1224),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-      appBar: AppBar(
-        title: const Text('Gokrazy Manager'),
-        leading: _instances.isNotEmpty
-            ? IconButton(
-                tooltip: 'Refresh selected',
-                onPressed: selected == null ? null : () => _refresh(selected),
-                icon: const Icon(Icons.refresh_rounded),
-              )
-            : null,
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            onPressed: _refreshAll,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _instances.isEmpty
-              ? EmptyState(onAdd: () => _openEditor())
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final wide = constraints.maxWidth >= 820;
-                    final list = Card(
-                      margin: const EdgeInsets.only(left: 12, right: 12, top: 12, bottom: 12),
-                      child: InstanceList(
-                        instances: _instances,
-                        statuses: _statuses,
-                        errors: _errors,
-                        selectedId: _selectedId,
-                        onSelect: (id) => setState(() => _selectedId = id),
-                        onRefresh: _refresh,
-                      ),
-                    );
-                    final detail = selected == null
-                        ? const SizedBox.shrink()
-                        : InstanceDetail(
-                            instance: selected,
-                            status: _statuses[selected.id],
-                            error: _errors[selected.id],
-                            onEdit: () => _openEditor(selected),
-                            onDelete: () => _deleteInstance(selected),
-                            onRefresh: () => _refresh(selected),
-                            onPinned: (fingerprint) async {
-                              final password = await _repo?.passwordFor(selected.id) ?? '';
-                              await _saveInstance(
-                                selected.copyWith(pinnedFingerprint: fingerprint),
-                                password: password,
-                                stayOnPage: true,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _openEditor(),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Add instance'),
+          tooltip: 'Add instance',
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        appBar: AppBar(
+          title: const Text('Gokrazy Manager'),
+          leading: _instances.isNotEmpty
+              ? IconButton(
+                  tooltip: 'Refresh selected',
+                  onPressed: selected == null ? null : () => _refresh(selected),
+                  icon: const Icon(Icons.refresh_rounded),
+                )
+              : null,
+          actions: [
+            IconButton(
+              tooltip: 'Refresh all',
+              onPressed: _refreshAll,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator(strokeWidth: 3))
+              : _instances.isEmpty
+                  ? EmptyState(onAdd: () => _openEditor())
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final wide = constraints.maxWidth >= 860;
+                        final list = Card(
+                          margin: const EdgeInsets.only(
+                            left: 14,
+                            right: 12,
+                            top: 12,
+                            bottom: 12,
+                          ),
+                          child: InstanceList(
+                            instances: _instances,
+                            statuses: _statuses,
+                            errors: _errors,
+                            selectedId: _selectedId,
+                            onSelect: (id) => setState(() => _selectedId = id),
+                            onRefresh: _refresh,
+                          ),
+                        );
+                        final detail = selected == null
+                            ? const SizedBox.shrink()
+                            : InstanceDetail(
+                                instance: selected,
+                                status: _statuses[selected.id],
+                                error: _errors[selected.id],
+                                onEdit: () => _openEditor(selected),
+                                onDelete: () => _deleteInstance(selected),
+                                onRefresh: () => _refresh(selected),
+                                onPinned: (fingerprint) async {
+                                  final password = await _repo?.passwordFor(selected.id) ?? '';
+                                  await _saveInstance(
+                                    selected.copyWith(pinnedFingerprint: fingerprint),
+                                    password: password,
+                                    stayOnPage: true,
+                                  );
+                                },
                               );
-                            },
+                        if (!wide) {
+                          return Column(
+                            children: [
+                              SizedBox(height: 226, child: list),
+                              const Divider(height: 1),
+                              Expanded(child: detail),
+                            ],
                           );
-                    if (!wide) {
-                      return Column(
-                        children: [
-                          SizedBox(height: 220, child: list),
-                          const Divider(height: 1),
-                          Expanded(child: detail),
-                        ],
-                      );
-                    }
-                    return Row(
-                      children: [
-                        SizedBox(width: 340, child: list),
-                        const VerticalDivider(width: 1),
-                        Expanded(child: detail),
-                      ],
-                    );
-                  },
-                ),
+                        }
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(width: 360, child: list),
+                            const VerticalDivider(width: 1),
+                            Expanded(child: detail),
+                          ],
+                        );
+                      },
+                    ),
+        ),
+      ),
     );
   }
 }
@@ -1099,8 +1203,23 @@ class EmptyState extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.cloud_queue_rounded, size: 56, color: Colors.teal.shade700),
-                const SizedBox(height: 16),
+                Container(
+                  height: 88,
+                  width: 88,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: const Icon(Icons.cloud_queue_rounded, size: 48),
+                ),
+                const SizedBox(height: 18),
                 Text(
                   'No Gokrazy instances yet',
                   style: Theme.of(context).textTheme.titleMedium,
@@ -1115,7 +1234,7 @@ class EmptyState extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: onAdd,
                   icon: const Icon(Icons.add),
-                  label: const Text('Add instance'),
+                  label: const Text('Create first instance'),
                 ),
               ],
             ),
@@ -1166,12 +1285,21 @@ class InstanceList extends StatelessWidget {
               final error = errors[instance.id];
               final selected = selectedId == instance.id;
               final isHealthy = status != null && error == null;
-              return Card(
-                color: selected
-                    ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.28)
-                    : null,
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.outline.withValues(alpha: 0.22),
+                  ),
+                ),
                 child: ListTile(
                   onTap: () => onSelect(instance.id),
+                  selected: selected,
+                  selectedTileColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                   leading: StatusDot(ok: isHealthy),
                   title: Text(
                     instance.name,
@@ -1190,7 +1318,6 @@ class InstanceList extends StatelessWidget {
                     onPressed: () => onRefresh(instance),
                     icon: const Icon(Icons.sync_rounded, size: 20),
                   ),
-                  selected: selected,
                 ),
               );
             },
@@ -1428,7 +1555,7 @@ class _InstanceDetailState extends State<InstanceDetail> {
     return RefreshIndicator(
       onRefresh: () async => widget.onRefresh(),
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         children: [
           _InstanceHeaderCard(
             instance: widget.instance,
@@ -1563,7 +1690,7 @@ class _InstanceHeaderCard extends StatelessWidget {
                   color: stopped ? Colors.red : Colors.green,
                 ),
                 if (status != null)
-                _StatusChip(
+                  _StatusChip(
                   icon: Icons.miscellaneous_services,
                   label: 'Services $runningServices/$totalServices',
                   color: Colors.blueGrey,
@@ -1607,7 +1734,8 @@ class _StatusChip extends StatelessWidget {
       label: Text(label),
       side: BorderSide(color: color.withValues(alpha: 0.35)),
       visualDensity: VisualDensity.compact,
-      labelStyle: TextStyle(color: color),
+      labelStyle: TextStyle(color: color.withValues(alpha: 0.95), fontWeight: FontWeight.w600),
+      backgroundColor: color.withValues(alpha: 0.12),
     );
   }
 }
@@ -1671,6 +1799,7 @@ class OverviewCard extends StatelessWidget {
                 children: [
                   ...status.privateAddrs.map(
                     (addr) => Chip(
+                      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
                       avatar: const Icon(Icons.lan, size: 16),
                       label: Text(addr),
                     ),
@@ -1685,7 +1814,12 @@ class OverviewCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                ...status.publicAddrs.map((addr) => Chip(label: Text(addr))),
+                ...status.publicAddrs.map(
+                  (addr) => Chip(
+                    backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
+                    label: Text(addr),
+                  ),
+                ),
               ],
             ),
           ],
@@ -1729,6 +1863,19 @@ class ResourceCard extends StatelessWidget {
               used: memUsed,
               total: memTotal,
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.pie_chart_outline, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Usage is computed from available memory + persistent volume and updates every status refresh.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -1767,36 +1914,50 @@ class FlashCard extends StatelessWidget {
             Text('Update', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             if (progress != null) ...[
-              LinearProgressIndicator(value: progress),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: LinearProgressIndicator(value: progress),
+              ),
               const SizedBox(height: 8),
               Text(message ?? 'Uploading'),
               const SizedBox(height: 12),
             ],
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: busy ? null : onUpload,
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text('Squashfs'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: busy ? null : onTestboot,
+                  icon: const Icon(Icons.check_circle_outline),
+                  tooltip: 'Test boot',
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: busy ? null : onSwitch,
+                  icon: const Icon(Icons.swap_horiz),
+                  tooltip: 'Switch',
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: busy ? null : onReboot,
+                  icon: const Icon(Icons.restart_alt),
+                  tooltip: 'Reboot',
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Wrap(
               alignment: WrapAlignment.spaceBetween,
               spacing: 8,
               runSpacing: 8,
               children: [
-                FilledButton.icon(
-                  onPressed: busy ? null : onUpload,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Squashfs'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : onTestboot,
-                  icon: const Icon(Icons.check_circle_outline),
-                  label: const Text('Test boot'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : onSwitch,
-                  icon: const Icon(Icons.swap_horiz),
-                  label: const Text('Switch'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : onReboot,
-                  icon: const Icon(Icons.restart_alt),
-                  label: const Text('Reboot'),
-                ),
+                Text('Advanced actions', style: Theme.of(context).textTheme.labelLarge),
               ],
             ),
           ],
@@ -1839,7 +2000,8 @@ class ServicesCard extends StatelessWidget {
                   Text(
                     '$serviceCount',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
               ],
@@ -1881,7 +2043,8 @@ class ServicesCard extends StatelessWidget {
                               child: FilledButton.tonal(
                                 onPressed: () => service.stopped ? onStart(service) : onStop(service),
                                 style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  minimumSize: const Size(0, 38),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -1898,7 +2061,8 @@ class ServicesCard extends StatelessWidget {
                               child: FilledButton.tonal(
                                 onPressed: () => onRestart(service),
                                 style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  minimumSize: const Size(0, 38),
                                 ),
                                 child: const Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -1915,7 +2079,8 @@ class ServicesCard extends StatelessWidget {
                               child: FilledButton.tonal(
                                 onPressed: () => onLogs(service),
                                 style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  minimumSize: const Size(0, 38),
                                 ),
                                 child: const Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -1986,12 +2151,30 @@ class Meter extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text(label)),
+            Expanded(child: Text(label, style: Theme.of(context).textTheme.labelLarge)),
             Text('${_bytes(used)} / ${_bytes(total)}'),
           ],
         ),
         const SizedBox(height: 6),
-        LinearProgressIndicator(value: value),
+        Container(
+          height: 10,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.35),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 450),
+              tween: Tween<double>(begin: 0, end: value),
+              curve: Curves.easeOutCubic,
+              builder: (context, animatedValue, _) => LinearProgressIndicator(
+                value: animatedValue,
+                minHeight: 10,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -2013,20 +2196,29 @@ class InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 10),
-          SizedBox(width: 72, child: Text(label)),
-          Expanded(
-            child: Text(
-              value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.34),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 10),
+              SizedBox(width: 90, child: Text(label)),
+              Expanded(
+                child: Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -2041,16 +2233,16 @@ class ErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xfffffbeb),
+        color: Theme.of(context).colorScheme.errorContainer,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xfff59e0b)),
+        border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.4)),
       ),
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber, color: Color(0xffb45309)),
+          Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.onErrorContainer),
           const SizedBox(width: 10),
-          Expanded(child: Text(message)),
+          Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.w600))),
         ],
       ),
     );
@@ -2070,6 +2262,13 @@ class StatusDot extends StatelessWidget {
       decoration: BoxDecoration(
         color: ok ? const Color(0xff10b981) : const Color(0xffef4444),
         shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: (ok ? const Color(0xff10b981) : const Color(0xffef4444)).withValues(alpha: 0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 0),
+          ),
+        ],
       ),
     );
   }
