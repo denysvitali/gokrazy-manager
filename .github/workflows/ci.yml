@@ -333,11 +333,17 @@ jobs:
         id: resolve_keystore
         shell: bash
         run: |
+          KEYSTORE_LIST="$(keytool -list \
+            -keystore release-keystore.jks \
+            -storepass "$KEYSTORE_STORE_PASSWORD" \
+            2>&1 || true)"
+          if echo "$KEYSTORE_LIST" | grep -q "Keystore was tampered"; then
+            echo "::error::Invalid KEYSTORE_STORE_PASSWORD"
+            exit 1
+          fi
+
           mapfile -t AVAILABLE_ALIASES < <(
-            keytool -list \
-              -keystore release-keystore.jks \
-              -storepass "$KEYSTORE_STORE_PASSWORD" \
-              2>/dev/null \
+            printf '%s\n' "$KEYSTORE_LIST" \
             | awk 'match($0, /^Alias name: (.*)$/, a) { print a[1] }'
           )
 
@@ -362,6 +368,10 @@ jobs:
           fi
 
           if [ -z "$KEY_ALIAS" ]; then
+            if [ "${#AVAILABLE_ALIASES[@]}" -eq 0 ]; then
+              echo "::error::Could not parse keystore aliases from keytool output"
+              exit 1
+            fi
             echo "::error::Release keystore alias missing or invalid"
             exit 1
           fi
