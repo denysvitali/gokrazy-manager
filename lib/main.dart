@@ -6,155 +6,250 @@ import 'package:convert/convert.dart' show AccumulatorSink;
 import 'package:crypto/crypto.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+class AppSpacing {
+  static const double xxs = 4.0;
+  static const double xs = 8.0;
+  static const double s = 12.0;
+  static const double m = 16.0;
+  static const double l = 24.0;
+  static const double xl = 32.0;
+  static const double xxl = 48.0;
+}
+
+class AppRadius {
+  static const double sm = 4.0;
+  static const double md = 8.0;
+  static const double lg = 12.0;
+  static const double xl = 28.0;
+}
+
+class AppSeedColors {
+  static const Color darkSurface = Color.fromARGB(255, 11, 16, 32);
+  static const Color seed = Color.fromARGB(255, 15, 79, 103);
+}
+
+class AppMotion {
+  static const Duration fast = Duration(milliseconds: 220);
+  static const Duration normal = Duration(milliseconds: 320);
+}
+
+class AppBreakpoints {
+  static const double tablet = 700.0;
+  static const double desktop = 1024.0;
+}
+
+enum AppThemeVariant {
+  system,
+  light,
+  dark,
+  amoledBlack,
+}
+
+const String _themePreferenceKey = 'theme_variant';
+final ValueNotifier<AppThemeVariant> _themeVariant = ValueNotifier(AppThemeVariant.system);
+
+Future<void> _loadThemePreference() async {
+  final prefs = await SharedPreferences.getInstance();
+  final raw = prefs.getString(_themePreferenceKey);
+  if (raw == null) {
+    return;
+  }
+  try {
+    _themeVariant.value = AppThemeVariant.values.byName(raw);
+  } catch (_) {
+    // Ignore older or unknown preference values.
+  }
+}
+
+Future<void> _saveThemePreference(AppThemeVariant value) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(_themePreferenceKey, value.name);
+}
+
+ThemeData _buildTheme(Brightness brightness, {bool amoledBlack = false}) {
+  final colorScheme = ColorScheme.fromSeed(
+    seedColor: AppSeedColors.seed,
+    brightness: brightness,
+  );
+  final textTheme = ThemeData(brightness: brightness).textTheme.copyWith(
+        displayLarge: const TextStyle(fontSize: 57, fontWeight: FontWeight.w700),
+        displayMedium: const TextStyle(fontSize: 45, fontWeight: FontWeight.w700),
+        displaySmall: const TextStyle(fontSize: 36, fontWeight: FontWeight.w600),
+        headlineLarge: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
+        headlineMedium: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+        headlineSmall: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+        titleLarge: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+        titleMedium: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        titleSmall: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        bodyLarge: const TextStyle(fontSize: 16, height: 1.45),
+        bodyMedium: const TextStyle(fontSize: 14, height: 1.45),
+        bodySmall: const TextStyle(fontSize: 12, height: 1.35),
+        labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        labelMedium: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        labelSmall: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500),
+      );
+  final pageBg = (brightness == Brightness.dark && amoledBlack)
+      ? Colors.black
+      : brightness == Brightness.dark
+          ? AppSeedColors.darkSurface
+          : colorScheme.surface;
+  final cardBg = colorScheme.surfaceContainerHighest.withOpacity(0.9);
+
+  return ThemeData(
+    useMaterial3: true,
+    colorScheme: colorScheme,
+    brightness: brightness,
+    visualDensity: VisualDensity.adaptivePlatformDensity,
+    scaffoldBackgroundColor: pageBg,
+    textTheme: textTheme,
+    cardTheme: CardThemeData(
+      color: cardBg,
+      elevation: 0,
+      surfaceTintColor: colorScheme.primary.withOpacity(0.1),
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: pageBg,
+      foregroundColor: colorScheme.onSurface,
+      centerTitle: false,
+      scrolledUnderElevation: 0,
+      elevation: 0,
+      toolbarHeight: AppSpacing.xxl,
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: ButtonStyle(
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        ),
+        padding: const WidgetStatePropertyAll(EdgeInsets.all(AppSpacing.xs)),
+        minimumSize: const WidgetStatePropertyAll(Size(AppSpacing.xxl, AppSpacing.xxl)),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        minimumSize: const Size(0, AppSpacing.xxl),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        minimumSize: const Size(0, AppSpacing.xxl),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: BorderSide(color: colorScheme.primary, width: 1.2),
+      ),
+      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+      hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+      fillColor: colorScheme.surface,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.s,
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s, vertical: AppSpacing.xxs),
+      side: BorderSide.none,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+    ),
+    dividerTheme: DividerThemeData(
+      color: colorScheme.outlineVariant.withOpacity(0.4),
+      space: 0,
+      thickness: 1,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      labelTextStyle: WidgetStatePropertyAll(
+        textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+      ),
+      indicatorShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+      ),
+    ),
+  );
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await _loadThemePreference();
   runApp(const GokrazyManagerApp());
 }
+
+final _appRouter = GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const HomePage(),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const HomePage(initialNavIndex: 1),
+    ),
+    GoRoute(
+      path: '/instance/:instanceId',
+      builder: (context, state) => HomePage(
+        initialNavIndex: 0,
+        initialInstanceId: state.pathParameters['instanceId'],
+      ),
+    ),
+  ],
+  errorBuilder: (context, state) => const HomePage(),
+);
 
 class GokrazyManagerApp extends StatelessWidget {
   const GokrazyManagerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const seed = Color(0xff0f4f67);
-    final colorScheme = ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark);
-    final pageBg = const Color(0xff0c1323);
-    final cardBg = colorScheme.surfaceContainerHighest.withValues(alpha: 0.76);
-    return MaterialApp(
-      title: 'Gokrazy Manager',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: colorScheme,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        scaffoldBackgroundColor: pageBg,
-        cardTheme: CardThemeData(
-          color: cardBg,
-          elevation: 0,
-          surfaceTintColor: colorScheme.primary.withValues(alpha: 0.08),
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        appBarTheme: AppBarTheme(
-          backgroundColor: pageBg,
-          foregroundColor: colorScheme.onSurface,
-          centerTitle: false,
-          scrolledUnderElevation: 0,
-          elevation: 0,
-          titleTextStyle: TextStyle(
-            fontSize: 21,
-            fontWeight: FontWeight.w700,
-            color: colorScheme.onSurface,
-            letterSpacing: -0.3,
-          ),
-        ),
-        iconButtonTheme: const IconButtonThemeData(
-          style: ButtonStyle(
-            shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-              ),
-            ),
-            padding: WidgetStatePropertyAll(EdgeInsets.all(8)),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            elevation: 0,
-            backgroundColor: colorScheme.primary,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-            ),
-            textStyle: const TextStyle(fontWeight: FontWeight.w600),
-            minimumSize: const Size(0, 42),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: colorScheme.onSurface,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-            ),
-            textStyle: const TextStyle(fontWeight: FontWeight.w600),
-            minimumSize: const Size(0, 42),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.35)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.35)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: colorScheme.primary),
-          ),
-          labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-          hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-          fillColor: colorScheme.surface,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-        chipTheme: ChipThemeData(
-          labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          side: BorderSide.none,
-          backgroundColor: colorScheme.surfaceContainerHighest,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        dividerTheme: DividerThemeData(
-          color: colorScheme.outline.withValues(alpha: 0.35),
-          space: 0,
-          thickness: 1,
-        ),
-        textTheme: TextTheme(
-          titleLarge: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
-          titleMedium: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          titleSmall: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurfaceVariant,
-            fontSize: 13,
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 14.5,
-            color: colorScheme.onSurfaceVariant,
-            height: 1.4,
-          ),
-          bodyLarge: const TextStyle(height: 1.4),
-          labelLarge: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurfaceVariant,
-            letterSpacing: 0.2,
-          ),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        bottomSheetTheme: const BottomSheetThemeData(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-        ),
-      ),
-      home: const HomePage(),
+    return ValueListenableBuilder<AppThemeVariant>(
+      valueListenable: _themeVariant,
+      builder: (context, value, child) {
+        final dark = value == AppThemeVariant.dark || value == AppThemeVariant.amoledBlack;
+        final amoled = value == AppThemeVariant.amoledBlack;
+        final themeMode = value == AppThemeVariant.light
+            ? ThemeMode.light
+            : dark
+                ? ThemeMode.dark
+                : ThemeMode.system;
+        return MaterialApp.router(
+          title: 'Gokrazy Manager',
+          debugShowCheckedModeBanner: false,
+          theme: _buildTheme(Brightness.light),
+          darkTheme: _buildTheme(Brightness.dark, amoledBlack: amoled),
+          themeMode: themeMode,
+          routerConfig: _appRouter,
+        );
+      },
     );
   }
 }
@@ -702,7 +797,14 @@ String normalizeUrl(String value) {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({
+    this.initialNavIndex = 0,
+    this.initialInstanceId,
+    super.key,
+  });
+
+  final int initialNavIndex;
+  final String? initialInstanceId;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -715,11 +817,79 @@ class _HomePageState extends State<HomePage> {
   final Map<String, String> _errors = {};
   String? _selectedId;
   bool _loading = true;
+  int _activeNavIndex = 0;
+  final Set<String> _statusLoading = {};
 
   @override
   void initState() {
     super.initState();
+    _activeNavIndex = widget.initialNavIndex;
     _load();
+  }
+
+  @override
+  void didUpdateWidget(HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialNavIndex != oldWidget.initialNavIndex ||
+        widget.initialInstanceId != oldWidget.initialInstanceId) {
+      setState(() {
+        _activeNavIndex = widget.initialNavIndex;
+      });
+      final resolved = _resolveSelectedId(widget.initialInstanceId);
+      if (_selectedId != resolved) {
+        setState(() => _selectedId = resolved);
+      }
+    }
+  }
+
+  String? _resolveSelectedId(String? requestedId) {
+    if (requestedId != null && _instances.any((entry) => entry.id == requestedId)) {
+      return requestedId;
+    }
+    if (_selectedId != null && _instances.any((entry) => entry.id == _selectedId)) {
+      return _selectedId;
+    }
+    if (_instances.isEmpty) {
+      return null;
+    }
+    return _instances.first.id;
+  }
+
+  void _syncRouteTab(int index) {
+    setState(() => _activeNavIndex = index);
+    if (index == 1) {
+      context.go('/settings');
+    } else {
+      context.go(_selectedId == null ? '/' : '/instance/$_selectedId');
+    }
+  }
+
+  void _selectInstance(String id) {
+    if (!mounted) {
+      return;
+    }
+    if (!_instances.any((entry) => entry.id == id)) {
+      return;
+    }
+    setState(() {
+      _activeNavIndex = 0;
+      _selectedId = id;
+    });
+    context.go('/instance/$id');
+  }
+
+  Future<void> _persistRouteForSelection() async {
+    if (_activeNavIndex == 1) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    if (_selectedId == null) {
+      context.go('/');
+      return;
+    }
+    context.go('/instance/$_selectedId');
   }
 
   Future<void> _load() async {
@@ -731,10 +901,11 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _repo = repo;
       _instances = instances;
-      _selectedId = instances.isEmpty ? null : instances.first.id;
+      _selectedId = _resolveSelectedId(widget.initialInstanceId);
       _loading = false;
     });
     await _refreshAll();
+    await _persistRouteForSelection();
   }
 
   Future<void> _refreshAll() async {
@@ -748,9 +919,14 @@ class _HomePageState extends State<HomePage> {
     if (repo == null) {
       return;
     }
+    setState(() => _statusLoading.add(instance.id));
+    if (_errors[instance.id] != null) {
+      _errors.remove(instance.id);
+    }
     final password = await repo.passwordFor(instance.id);
     if (password == null) {
       setState(() => _errors[instance.id] = 'Missing password');
+      setState(() => _statusLoading.remove(instance.id));
       return;
     }
     try {
@@ -785,6 +961,10 @@ class _HomePageState extends State<HomePage> {
         return;
       }
       setState(() => _errors[instance.id] = error.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _statusLoading.remove(instance.id));
+      }
     }
   }
 
@@ -821,8 +1001,12 @@ class _HomePageState extends State<HomePage> {
       _instances = next;
       if (!stayOnPage) {
         _selectedId = instance.id;
+        _activeNavIndex = 0;
       }
     });
+    if (!stayOnPage) {
+      await _persistRouteForSelection();
+    }
     await _refresh(instance);
   }
 
@@ -862,6 +1046,9 @@ class _HomePageState extends State<HomePage> {
       _errors.remove(instance.id);
       _selectedId = next.isEmpty ? null : next.first.id;
     });
+    if (_activeNavIndex == 0) {
+      await _persistRouteForSelection();
+    }
   }
 
   Future<bool> _confirmCertificate(String fingerprint) async {
@@ -907,91 +1094,188 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final reducedMotion = MediaQuery.of(context).disableAnimations;
     final selected = _instances
         .where((entry) => entry.id == _selectedId)
         .firstOrNull;
+    final rail = _instances.isNotEmpty
+        ? MediaQuery.sizeOf(context).width >= AppBreakpoints.desktop
+        : false;
+
+    final content = AnimatedSwitcher(
+      duration: reducedMotion ? Duration.zero : AppMotion.normal,
+      child: _loading
+          ? const HomeSkeletonList()
+          : _activeNavIndex == 1
+              ? const _SettingsPanel()
+              : _buildMainContent(context, selected),
+    );
+
+    if (rail) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          NavigationRail(
+            selectedIndex: _activeNavIndex,
+            onDestinationSelected: _syncRouteTab,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.dashboard_outlined),
+                selectedIcon: Icon(Icons.dashboard),
+                label: Text('Dashboard'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: Text('Settings'),
+              ),
+            ],
+            labelType: NavigationRailLabelType.all,
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: Scaffold(
+              appBar: _appBar(selected),
+              floatingActionButton: _activeNavIndex == 0
+                  ? _buildAddButton()
+                  : null,
+              body: content,
+            ),
+          ),
+        ],
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gokrazy Manager'),
-        leading: _instances.isNotEmpty
-            ? IconButton(
+      appBar: _appBar(selected),
+      floatingActionButton: _activeNavIndex == 0 ? _buildAddButton() : null,
+      body: content,
+      bottomNavigationBar: Semantics(
+        label: 'Main navigation',
+        child: NavigationBar(
+          selectedIndex: _activeNavIndex,
+          onDestinationSelected: _syncRouteTab,
+          destinations: const [
+            NavigationBarDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+            NavigationBarDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  PreferredSizeWidget _appBar(GokrazyInstance? selected) {
+    return AppBar(
+      title: const Text('Gokrazy Manager'),
+      leading: _activeNavIndex == 0 && _instances.isNotEmpty
+          ? Semantics(
+              label: 'Refresh selected instance',
+              button: true,
+              child: IconButton(
                 tooltip: 'Refresh selected',
                 onPressed: selected == null ? null : () => _refresh(selected),
                 icon: const Icon(Icons.refresh_rounded),
-              )
-            : null,
-        actions: [
-          IconButton(
-            tooltip: 'Refresh all',
-            onPressed: _refreshAll,
-            icon: const Icon(Icons.refresh),
+              ),
+            )
+          : null,
+      actions: [
+        if (_activeNavIndex == 0)
+          Semantics(
+            label: 'Refresh all instances',
+            button: true,
+            child: IconButton(
+              tooltip: 'Refresh all',
+              onPressed: _loading ? null : _refreshAll,
+              icon: const Icon(Icons.refresh),
+            ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildAddButton() {
+    return FloatingActionButton.extended(
+      onPressed: () => _openEditor(),
+      icon: const Icon(Icons.add_rounded),
+      label: const Text('Add instance'),
+      tooltip: 'Add instance',
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+    );
+  }
+
+  Widget _buildMainContent(BuildContext context, GokrazyInstance? selected) {
+    if (_instances.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.m,
+            vertical: AppSpacing.xxl,
+          ),
+          child: EmptyState(onAdd: () => _openEditor()),
+        ),
+      );
+    }
+
+    final list = InstanceList(
+      instances: _instances,
+      statuses: _statuses,
+      errors: _errors,
+      selectedId: _selectedId,
+      loadingIds: _statusLoading,
+      onSelect: _selectInstance,
+      onRefresh: _refresh,
+    );
+    final detail = selected == null
+        ? const _NoSelectionPlaceholder()
+        : InstanceDetail(
+            instance: selected,
+            status: _statuses[selected.id],
+            statusLoading: _statusLoading.contains(selected.id),
+            error: _errors[selected.id],
+            onEdit: () => _openEditor(selected),
+            onDelete: () => _deleteInstance(selected),
+            onRefresh: () => _refresh(selected),
+            onPinned: (fingerprint) async {
+              final password = await _repo?.passwordFor(selected.id) ?? '';
+              await _saveInstance(
+                selected.copyWith(pinnedFingerprint: fingerprint),
+                password: password,
+                stayOnPage: true,
+              );
+            },
+          );
+
+    if (_activeNavIndex != 0) {
+      return const SizedBox.shrink();
+    }
+
+    if (MediaQuery.sizeOf(context).width < AppBreakpoints.tablet) {
+      return Padding(
+        padding: const EdgeInsets.all(AppSpacing.m),
+        child: Column(
+          children: [
+            AnimatedContainer(
+              duration: AppMotion.fast,
+              height: 280,
+              child: list,
+            ),
+            const SizedBox(height: AppSpacing.m),
+            Expanded(child: detail),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.m),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 360, child: list),
+          const SizedBox(width: AppSpacing.m),
+          Expanded(child: detail),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openEditor(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add instance'),
-        tooltip: 'Add instance',
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator(strokeWidth: 3))
-            : _instances.isEmpty
-                ? EmptyState(onAdd: () => _openEditor())
-                : Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= 900;
-                        final list = InstanceList(
-                          instances: _instances,
-                          statuses: _statuses,
-                          errors: _errors,
-                          selectedId: _selectedId,
-                          onSelect: (id) => setState(() => _selectedId = id),
-                          onRefresh: _refresh,
-                        );
-                        final detail = selected == null
-                            ? const SizedBox.shrink()
-                            : InstanceDetail(
-                                instance: selected,
-                                status: _statuses[selected.id],
-                                error: _errors[selected.id],
-                                onEdit: () => _openEditor(selected),
-                                onDelete: () => _deleteInstance(selected),
-                                onRefresh: () => _refresh(selected),
-                                onPinned: (fingerprint) async {
-                                  final password = await _repo?.passwordFor(selected.id) ?? '';
-                                  await _saveInstance(
-                                    selected.copyWith(pinnedFingerprint: fingerprint),
-                                    password: password,
-                                    stayOnPage: true,
-                                  );
-                                },
-                              );
-                        if (!wide) {
-                          return Column(
-                            children: [
-                              SizedBox(height: 220, child: list),
-                              const SizedBox(height: 12),
-                              Expanded(child: detail),
-                            ],
-                          );
-                        }
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(width: 340, child: list),
-                            const SizedBox(width: 12),
-                            Expanded(child: detail),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
       ),
     );
   }
@@ -1070,7 +1354,7 @@ class _InstanceEditorState extends State<InstanceEditor> {
   Widget build(BuildContext context) {
     final inset = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, inset + 20),
+      padding: EdgeInsets.fromLTRB(AppSpacing.m, 0, AppSpacing.m, inset + AppSpacing.m),
       child: Form(
         key: _formKey,
         child: Column(
@@ -1080,7 +1364,7 @@ class _InstanceEditorState extends State<InstanceEditor> {
               widget.instance == null ? 'Add instance' : 'Edit instance',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.m),
             TextFormField(
               controller: _name,
               decoration: const InputDecoration(
@@ -1089,7 +1373,7 @@ class _InstanceEditorState extends State<InstanceEditor> {
               ),
               validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s),
             TextFormField(
               controller: _url,
               decoration: const InputDecoration(
@@ -1108,7 +1392,7 @@ class _InstanceEditorState extends State<InstanceEditor> {
                 return null;
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s),
             TextFormField(
               controller: _username,
               decoration: const InputDecoration(
@@ -1117,7 +1401,7 @@ class _InstanceEditorState extends State<InstanceEditor> {
               ),
               validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s),
             TextFormField(
               controller: _password,
               decoration: InputDecoration(
@@ -1132,7 +1416,7 @@ class _InstanceEditorState extends State<InstanceEditor> {
               obscureText: !_showPassword,
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -1140,19 +1424,23 @@ class _InstanceEditorState extends State<InstanceEditor> {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.m),
             SizedBox(
               width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _saving ? null : _save,
-                icon: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_outlined),
-                label: Text(_saving ? 'Saving' : 'Save'),
+              child: Semantics(
+                label: 'Save instance',
+                button: true,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(_saving ? 'Saving' : 'Save'),
+                ),
               ),
             ),
           ],
@@ -1172,33 +1460,38 @@ class EmptyState extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
         child: Card(
           margin: EdgeInsets.zero,
           clipBehavior: Clip.antiAlias,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 30, 24, 26),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.l,
+              AppSpacing.xl,
+              AppSpacing.l,
+              AppSpacing.l,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircleAvatar(
-                  radius: 30,
+                  radius: AppSpacing.l,
                   backgroundColor: colors.surfaceContainerHighest,
                   foregroundColor: colors.onSurface,
                   child: const Icon(Icons.cloud_queue_rounded, size: 32),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.s),
                 Text(
                   'No instances yet',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Add an appliance URL and credentials to monitor services, logs, and updates in one place.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.m),
                 FilledButton(
                   onPressed: onAdd,
                   child: const Text('Create first instance'),
@@ -1218,6 +1511,7 @@ class InstanceList extends StatelessWidget {
     required this.statuses,
     required this.errors,
     required this.selectedId,
+    required this.loadingIds,
     required this.onSelect,
     required this.onRefresh,
     super.key,
@@ -1227,6 +1521,7 @@ class InstanceList extends StatelessWidget {
   final Map<String, GokrazyStatus> statuses;
   final Map<String, String> errors;
   final String? selectedId;
+  final Set<String> loadingIds;
   final ValueChanged<String> onSelect;
   final ValueChanged<GokrazyInstance> onRefresh;
 
@@ -1236,63 +1531,108 @@ class InstanceList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-            child: Text(
-              'Instances',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+        Padding(
+          padding: const EdgeInsets.only(
+            left: AppSpacing.xs,
+            right: AppSpacing.xs,
+          ),
+          child: Text(
+            'Instances',
+            style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.s),
         Expanded(
           child: Card(
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xs,
+                AppSpacing.xs,
+                AppSpacing.xs,
+                AppSpacing.xs,
+              ),
               itemCount: instances.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s),
               itemBuilder: (context, index) {
                 final instance = instances[index];
                 final status = statuses[instance.id];
                 final error = errors[instance.id];
                 final selected = selectedId == instance.id;
+                final isLoading = loadingIds.contains(instance.id);
                 final isHealthy = status != null && error == null;
-                return InkWell(
-                  onTap: () => onSelect(instance.id),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
+                return Semantics(
+                  label: '${instance.name}, open details',
+                  selected: selected,
+                  button: true,
+                  child: InkWell(
+                    onTap: () => onSelect(instance.id),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    child: AnimatedContainer(
+                      duration: AppMotion.fast,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(
+                          color: selected
+                              ? colors.primary.withOpacity(0.55)
+                              : colors.outline.withOpacity(0.28),
+                        ),
                         color: selected
-                            ? colors.primary.withValues(alpha: 0.55)
-                            : colors.outline.withValues(alpha: 0.28),
+                            ? colors.primaryContainer.withOpacity(0.45)
+                            : null,
                       ),
-                      color: selected
-                          ? colors.primaryContainer.withValues(alpha: 0.45)
-                          : null,
-                    ),
-                    child: ListTile(
-                      onTap: () => onSelect(instance.id),
-                      contentPadding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
-                      leading: StatusDot(ok: isHealthy),
-                      title: Text(
-                        instance.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: status == null
-                          ? Text(instance.baseUrl, maxLines: 1, overflow: TextOverflow.ellipsis)
-                          : Text(
-                              '${status.runningServices}/${status.services.length} services running',
+                      child: ListTile(
+                        onTap: () => onSelect(instance.id),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s,
+                          vertical: AppSpacing.xs,
+                        ),
+                        leading: isLoading
+                            ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    error == null ? colors.primary : colors.error,
+                                  ),
+                                ),
+                              )
+                            : Hero(
+                                tag: 'status-dot-${instance.id}',
+                                child: StatusDot(ok: isHealthy),
+                              ),
+                        title: Hero(
+                          tag: 'instance-${instance.id}',
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: Text(
+                              instance.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleSmall,
                             ),
-                      trailing: IconButton(
-                        tooltip: 'Refresh',
-                        onPressed: () => onRefresh(instance),
-                        icon: const Icon(Icons.refresh_rounded, size: 20),
+                          ),
+                        ),
+                        subtitle: status == null
+                            ? Text(
+                                isLoading ? 'Refreshing...' : instance.baseUrl,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : Text(
+                                '${status.runningServices}/${status.services.length} services running',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                        trailing: Semantics(
+                          label: 'Refresh ${instance.name}',
+                          button: true,
+                          child: IconButton(
+                            tooltip: 'Refresh',
+                            onPressed: () => onRefresh(instance),
+                            icon: const Icon(Icons.refresh_rounded, size: 20),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1310,6 +1650,7 @@ class InstanceDetail extends StatefulWidget {
   const InstanceDetail({
     required this.instance,
     required this.status,
+    required this.statusLoading,
     required this.error,
     required this.onEdit,
     required this.onDelete,
@@ -1320,6 +1661,7 @@ class InstanceDetail extends StatefulWidget {
 
   final GokrazyInstance instance;
   final GokrazyStatus? status;
+  final bool statusLoading;
   final String? error;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -1464,51 +1806,57 @@ class _InstanceDetailState extends State<InstanceDetail> {
           minChildSize: 0.4,
           maxChildSize: 0.95,
           expand: false,
-                builder: (_, controller) {
+          builder: (_, controller) {
             return Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.m),
               child: StreamBuilder<String>(
                 stream: stream,
                 builder: (context, snapshot) {
+                  final colors = Theme.of(context).colorScheme;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
                           Expanded(
-                            child: Text('${service.name} logs',
-                                style: Theme.of(context).textTheme.titleMedium),
+                            child: Text(
+                              '${service.name} logs',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                           ),
-                          IconButton(
-                            tooltip: 'Close',
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close),
+                          Semantics(
+                            label: 'Close logs',
+                            button: true,
+                            child: IconButton(
+                              tooltip: 'Close',
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close),
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.xs),
                       Expanded(
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: const Color(0xff0b1021),
-                            borderRadius: BorderRadius.circular(10),
+                            color: colors.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(AppSpacing.s),
                             child: SingleChildScrollView(
                               controller: controller,
                               child: SelectableText(
                                 snapshot.data ?? 'Connecting...',
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  color: Colors.white,
-                                ),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontFamily: 'monospace',
+                                    ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.xs),
                     ],
                   );
                 },
@@ -1530,10 +1878,16 @@ class _InstanceDetailState extends State<InstanceDetail> {
   @override
   Widget build(BuildContext context) {
     final status = widget.status;
+    final loading = widget.statusLoading && status == null;
     return RefreshIndicator(
       onRefresh: () async => widget.onRefresh(),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.m,
+          AppSpacing.xs,
+          AppSpacing.m,
+          AppSpacing.l,
+        ),
         children: [
           _InstanceHeaderCard(
             instance: widget.instance,
@@ -1547,12 +1901,16 @@ class _InstanceDetailState extends State<InstanceDetail> {
             const SizedBox(height: 12),
             ErrorBanner(message: widget.error!),
           ],
-          const SizedBox(height: 16),
-          if (status == null)
-            const Center(child: Padding(
-              padding: EdgeInsets.all(32),
-              child: CircularProgressIndicator(),
-            ))
+            const SizedBox(height: 16),
+          if (loading)
+            const _DetailSkeleton()
+          else if (status == null)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: NoDataState(message: 'No status available for this instance.'),
+              ),
+            )
           else ...[
             OverviewCard(status: status),
             const SizedBox(height: 12),
@@ -1616,13 +1974,14 @@ class _InstanceHeaderCard extends StatelessWidget {
     final runningServices = status?.services.where((service) => service.running).length ?? 0;
     final totalServices = status?.services.length ?? 0;
     final stopped = hasError || status == null;
+    final colors = Theme.of(context).colorScheme;
     final lastSeenText = instance.lastSeen == null
         ? 'Never checked'
         : 'Last checked ${_timeAgo(instance.lastSeen!)}';
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1633,9 +1992,9 @@ class _InstanceHeaderCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(instance.name, style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(instance.baseUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(lastSeenText, style: Theme.of(context).textTheme.bodySmall),
                     ],
                   ),
@@ -1644,46 +2003,49 @@ class _InstanceHeaderCard extends StatelessWidget {
                   tooltip: 'Refresh',
                   onPressed: onRefresh,
                   icon: const Icon(Icons.sync_rounded),
+                  color: colors.onSurfaceVariant,
                 ),
                 IconButton(
                   tooltip: 'Edit',
                   onPressed: onEdit,
                   icon: const Icon(Icons.edit_outlined),
+                  color: colors.onSurfaceVariant,
                 ),
                 IconButton(
                   tooltip: 'Delete',
                   onPressed: onDelete,
                   icon: const Icon(Icons.delete_outline),
+                  color: colors.error,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.m),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
               children: [
                 _StatusChip(
                   icon: stopped ? Icons.wifi_off : Icons.wifi,
                   label: stopped ? 'Connection issue' : 'Connected',
-                  color: stopped ? Colors.red : Colors.green,
+                  tone: stopped ? ConnectionTone.error : ConnectionTone.success,
                 ),
                 if (status != null)
                   _StatusChip(
                   icon: Icons.miscellaneous_services,
                   label: 'Services $runningServices/$totalServices',
-                  color: Colors.blueGrey,
+                  tone: ConnectionTone.info,
                 ),
                 if (status?.hostname != null && status!.hostname!.isNotEmpty)
                   _StatusChip(
                     icon: Icons.computer,
                     label: status!.hostname!,
-                    color: Colors.indigo,
+                    tone: ConnectionTone.primary,
                   ),
                 if (status?.kernel != null && status!.kernel!.isNotEmpty)
                   _StatusChip(
                     icon: Icons.memory_outlined,
                     label: status!.kernel!,
-                    color: Colors.orange.shade700,
+                    tone: ConnectionTone.secondary,
                   ),
               ],
             ),
@@ -1698,25 +2060,35 @@ class _StatusChip extends StatelessWidget {
   const _StatusChip({
     required this.icon,
     required this.label,
-    required this.color,
+    required this.tone,
   });
 
   final IconData icon;
   final String label;
-  final Color color;
+  final ConnectionTone tone;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final (Color background, Color foreground) = switch (tone) {
+      ConnectionTone.success => (colors.tertiaryContainer, colors.onTertiaryContainer),
+      ConnectionTone.error => (colors.errorContainer, colors.onErrorContainer),
+      ConnectionTone.info => (colors.secondaryContainer, colors.onSecondaryContainer),
+      ConnectionTone.primary => (colors.primaryContainer, colors.onPrimaryContainer),
+      ConnectionTone.secondary => (colors.surfaceContainerHighest, colors.onSurface),
+    };
     return Chip(
-      avatar: Icon(icon, size: 16, color: color),
+      avatar: Icon(icon, size: 16, color: foreground),
       label: Text(label),
-      side: BorderSide(color: color.withValues(alpha: 0.35)),
+      side: BorderSide(color: background),
       visualDensity: VisualDensity.compact,
-      labelStyle: TextStyle(color: color.withValues(alpha: 0.95), fontWeight: FontWeight.w600),
-      backgroundColor: color.withValues(alpha: 0.12),
+      labelStyle: TextStyle(color: foreground, fontWeight: FontWeight.w600),
+      backgroundColor: background.withOpacity(0.4),
     );
   }
 }
+
+enum ConnectionTone { success, error, info, primary, secondary }
 
 String _timeAgo(DateTime value) {
   final now = DateTime.now();
@@ -1740,9 +2112,10 @@ class OverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1751,10 +2124,10 @@ class OverviewCard extends StatelessWidget {
                 Text('Overview', style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
                 if (status.publicAddrs.isNotEmpty || status.privateAddrs.isNotEmpty)
-                  const Icon(Icons.route_outlined, size: 18),
+                  Icon(Icons.route_outlined, size: 18, color: colors.onSurfaceVariant),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.s),
             InfoRow(icon: Icons.memory, label: 'Model', value: status.model ?? 'Unknown'),
             InfoRow(icon: Icons.terminal, label: 'Kernel', value: status.kernel ?? 'Unknown'),
             InfoRow(icon: Icons.badge_outlined, label: 'Host', value: status.hostname ?? 'Unknown'),
@@ -1767,35 +2140,41 @@ class OverviewCard extends StatelessWidget {
             if (status.sbomHash != null)
               InfoRow(icon: Icons.fingerprint, label: 'SBOM', value: status.sbomHash!),
             if (status.privateAddrs.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.s),
               Text('Private addresses', style: Theme.of(context).textTheme.labelLarge),
             ],
             if (status.privateAddrs.isNotEmpty)
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
                 children: [
                   ...status.privateAddrs.map(
                     (addr) => Chip(
                       backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                      avatar: const Icon(Icons.lan, size: 16),
-                      label: Text(addr),
+                      avatar: Icon(Icons.lan, size: 16, color: colors.onSecondaryContainer),
+                      label: Text(
+                        addr,
+                        style: TextStyle(color: colors.onSecondaryContainer),
+                      ),
                     ),
                   ),
                 ],
               ),
             if (status.publicAddrs.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.s),
               Text('Public addresses', style: Theme.of(context).textTheme.labelLarge),
             ],
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
               children: [
                 ...status.publicAddrs.map(
                   (addr) => Chip(
-                    backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
-                    label: Text(addr),
+                    backgroundColor: colors.tertiaryContainer,
+                    label: Text(
+                      addr,
+                      style: TextStyle(color: colors.onTertiaryContainer),
+                    ),
                   ),
                 ),
               ],
@@ -1820,20 +2199,23 @@ class ResourceCard extends StatelessWidget {
     final memUsed = memTotal - (status.memAvailable ?? 0);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Resources', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.m),
             if (permTotal > 0)
-              Text('Persistent data ${_percent(permUsed, permTotal)}', style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                'Persistent data ${_percent(permUsed, permTotal)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             Meter(
               label: 'Persistent data',
               used: permUsed,
               total: permTotal,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.m),
             if (memTotal > 0)
               Text('Memory ${_percent(memUsed, memTotal)}', style: Theme.of(context).textTheme.bodySmall),
             Meter(
@@ -1841,11 +2223,11 @@ class ResourceCard extends StatelessWidget {
               used: memUsed,
               total: memTotal,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s),
             Row(
               children: [
                 const Icon(Icons.pie_chart_outline, size: 18),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
                     'Usage is computed from available memory + persistent volume and updates every status refresh.',
@@ -1885,20 +2267,20 @@ class FlashCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Update', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s),
             if (progress != null) ...[
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 child: LinearProgressIndicator(value: progress),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xs),
               Text(message ?? 'Uploading'),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s),
             ],
             Row(
               children: [
@@ -1909,19 +2291,19 @@ class FlashCard extends StatelessWidget {
                     label: const Text('Squashfs'),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.xs),
                 IconButton.filled(
                   onPressed: busy ? null : onTestboot,
                   icon: const Icon(Icons.check_circle_outline),
                   tooltip: 'Test boot',
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.xs),
                 IconButton.filled(
                   onPressed: busy ? null : onSwitch,
                   icon: const Icon(Icons.swap_horiz),
                   tooltip: 'Switch',
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.xs),
                 IconButton.filled(
                   onPressed: busy ? null : onReboot,
                   icon: const Icon(Icons.restart_alt),
@@ -1929,15 +2311,7 @@ class FlashCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Text('Advanced actions', style: Theme.of(context).textTheme.labelLarge),
-              ],
-            ),
+            const SizedBox(height: AppSpacing.s),
           ],
         ),
       ),
@@ -1966,7 +2340,7 @@ class ServicesCard extends StatelessWidget {
     final serviceCount = services.length;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1984,108 +2358,330 @@ class ServicesCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 8),
-            if (services.isEmpty) ...[
-              const SizedBox(height: 4),
-              Text('No services found', style: Theme.of(context).textTheme.bodyMedium),
-            ],
-            ...services.map(
-              (service) => Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Card(
-                  margin: EdgeInsets.zero,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: StatusDot(ok: service.running),
-                          title: Text(
-                            service.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(service.stopped
-                              ? 'Stopped'
-                              : 'PID ${service.pid ?? '-'} • started ${service.startTime ?? 'unknown'}'),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Tooltip(
-                              message: service.stopped ? 'Start' : 'Stop',
-                              child: FilledButton.tonal(
-                                onPressed: () => service.stopped ? onStart(service) : onStop(service),
-                                style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                                  minimumSize: const Size(0, 38),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(service.stopped ? Icons.play_arrow : Icons.stop, size: 18),
-                                    const SizedBox(width: 6),
-                                    Text(service.stopped ? 'Start' : 'Stop'),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Tooltip(
-                              message: 'Restart',
-                              child: FilledButton.tonal(
-                                onPressed: () => onRestart(service),
-                                style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                                  minimumSize: const Size(0, 38),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.refresh, size: 18),
-                                    SizedBox(width: 6),
-                                    Text('Restart'),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Tooltip(
-                              message: 'Logs',
-                              child: FilledButton.tonal(
-                                onPressed: () => onLogs(service),
-                                style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                                  minimumSize: const Size(0, 38),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.terminal, size: 18),
-                                    SizedBox(width: 6),
-                                    Text('Logs'),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            if (service.args.isNotEmpty)
-                              OutlinedButton.icon(
-                                onPressed: () => _showServiceArgs(context, service),
-                                icon: const Icon(Icons.tune, size: 16),
-                                label: Text('Args ${service.args.length}'),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+            const SizedBox(height: AppSpacing.s),
+            if (services.isEmpty)
+              const Text('No services found', style: TextStyle(fontWeight: FontWeight.w500))
+            else
+              ListView.separated(
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: services.length,
+                shrinkWrap: true,
+                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s),
+                itemBuilder: (context, index) => _ServiceItem(
+                  service: services[index],
+                  onStart: onStart,
+                  onStop: onStop,
+                  onRestart: onRestart,
+                  onLogs: onLogs,
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ServiceItem extends StatelessWidget {
+  const _ServiceItem({
+    required this.service,
+    required this.onStart,
+    required this.onStop,
+    required this.onRestart,
+    required this.onLogs,
+  });
+
+  final GokrazyService service;
+  final ValueChanged<GokrazyService> onStart;
+  final ValueChanged<GokrazyService> onStop;
+  final ValueChanged<GokrazyService> onRestart;
+  final ValueChanged<GokrazyService> onLogs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.s),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Hero(
+                tag: 'service-${service.name}',
+                child: StatusDot(ok: service.running),
+              ),
+              title: Text(
+                service.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(service.stopped
+                  ? 'Stopped'
+                  : 'PID ${service.pid ?? '-'} • started ${service.startTime ?? 'unknown'}'),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.s,
+              runSpacing: AppSpacing.s,
+              alignment: WrapAlignment.start,
+              children: [
+                FilledButton.tonal(
+                  onPressed: () => service.stopped ? onStart(service) : onStop(service),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s,
+                      vertical: AppSpacing.xs,
+                    ),
+                    minimumSize: const Size(0, 38),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(service.stopped ? Icons.play_arrow : Icons.stop, size: 18),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(service.stopped ? 'Start' : 'Stop'),
+                    ],
+                  ),
+                ),
+                FilledButton.tonal(
+                  onPressed: () => onRestart(service),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s,
+                      vertical: AppSpacing.xs,
+                    ),
+                    minimumSize: const Size(0, 38),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.refresh, size: 18),
+                      SizedBox(width: AppSpacing.xs),
+                      Text('Restart'),
+                    ],
+                  ),
+                ),
+                FilledButton.tonal(
+                  onPressed: () => onLogs(service),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s,
+                      vertical: AppSpacing.xs,
+                    ),
+                    minimumSize: const Size(0, 38),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.terminal, size: 18),
+                      SizedBox(width: AppSpacing.xs),
+                      Text('Logs'),
+                    ],
+                  ),
+                ),
+                if (service.args.isNotEmpty)
+                  OutlinedButton.icon(
+                    onPressed: () => _showServiceArgs(context, service),
+                    icon: const Icon(Icons.tune, size: 16),
+                    label: Text('Args ${service.args.length}'),
+                  ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _NoSelectionPlaceholder extends StatelessWidget {
+  const _NoSelectionPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.list_alt_rounded, size: 42),
+              SizedBox(height: AppSpacing.s),
+              Text('Select an instance to view details'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsPanel extends StatelessWidget {
+  const _SettingsPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.m),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.m),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Settings', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: AppSpacing.s),
+              Text(
+                'Adaptive navigation is enabled. Use this section for app preferences, diagnostics, or export tools.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: AppSpacing.m),
+              Text('Theme', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: AppSpacing.xs),
+              ValueListenableBuilder<AppThemeVariant>(
+                valueListenable: _themeVariant,
+                builder: (context, selected, _) {
+                  return SegmentedButton<AppThemeVariant>(
+                    segments: const [
+                      ButtonSegment(
+                        value: AppThemeVariant.system,
+                        icon: Icon(Icons.devices_other),
+                        label: Text('System'),
+                      ),
+                      ButtonSegment(
+                        value: AppThemeVariant.light,
+                        icon: Icon(Icons.light_mode),
+                        label: Text('Light'),
+                      ),
+                      ButtonSegment(
+                        value: AppThemeVariant.dark,
+                        icon: Icon(Icons.dark_mode),
+                        label: Text('Dark'),
+                      ),
+                      ButtonSegment(
+                        value: AppThemeVariant.amoledBlack,
+                        icon: Icon(Icons.nightlight_round),
+                        label: Text('AMOLED'),
+                      ),
+                    ],
+                    selected: {selected},
+                    onSelectionChanged: (values) {
+                      if (values.isNotEmpty) {
+                        _themeVariant.value = values.first;
+                        unawaited(_saveThemePreference(values.first));
+                      }
+                    },
+                    showSelectedIcon: false,
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.m),
+              ListTile(
+                leading: Icon(Icons.privacy_tip_outlined, color: cs.onSurface),
+                title: const Text('Data'),
+                subtitle: const Text('Instances are stored locally'),
+              ),
+              const Divider(),
+              ListTile(
+                leading: Icon(Icons.storage, color: cs.onSurface),
+                title: const Text('Storage'),
+                subtitle: const Text('Credentials are kept in secure storage'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HomeSkeletonList extends StatelessWidget {
+  const HomeSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.m),
+      child: Column(
+        children: [
+          const SkeletonRow(height: 24, width: 130),
+          const SizedBox(height: AppSpacing.s),
+          Expanded(
+            child: ListView.separated(
+              itemCount: 4,
+              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s),
+              itemBuilder: (_, __) => const Card(
+                child: SkeletonRow(height: 72),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailSkeleton extends StatelessWidget {
+  const _DetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: const [
+        Card(child: SkeletonRow(height: 138)),
+        SizedBox(height: AppSpacing.s),
+        Card(child: SkeletonRow(height: 140)),
+        SizedBox(height: AppSpacing.s),
+        Card(child: SkeletonRow(height: 120)),
+        SizedBox(height: AppSpacing.s),
+        Card(child: SkeletonRow(height: 120)),
+      ],
+    );
+  }
+}
+
+class NoDataState extends StatelessWidget {
+  const NoDataState({required this.message, super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.m),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline),
+            const SizedBox(width: AppSpacing.s),
+            Expanded(child: Text(message)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SkeletonRow extends StatelessWidget {
+  const SkeletonRow({required this.height, this.width = double.infinity, super.key});
+
+  final double height;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: AppMotion.normal,
+      height: height,
+      width: width,
+      margin: const EdgeInsets.all(AppSpacing.s),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.45),
       ),
     );
   }
@@ -2124,6 +2720,7 @@ class Meter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = total <= 0 ? 0.0 : (used / total).clamp(0.0, 1.0);
+    final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2133,22 +2730,22 @@ class Meter extends StatelessWidget {
             Text('${_bytes(used)} / ${_bytes(total)}'),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppSpacing.xs),
         Container(
-          height: 10,
+          height: AppSpacing.xs,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            color: colors.surface.withOpacity(0.35),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             child: TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 450),
+              duration: AppMotion.normal,
               tween: Tween<double>(begin: 0, end: value),
               curve: Curves.easeOutCubic,
               builder: (context, animatedValue, _) => LinearProgressIndicator(
                 value: animatedValue,
-                minHeight: 10,
+                minHeight: AppSpacing.xs,
               ),
             ),
           ),
@@ -2173,19 +2770,25 @@ class InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.34),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          color: Theme.of(context).colorScheme.surface.withOpacity(0.34),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s,
+            vertical: AppSpacing.s,
+          ),
           child: Row(
             children: [
               Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 10),
-              SizedBox(width: 90, child: Text(label)),
+              const SizedBox(width: AppSpacing.s),
+              SizedBox(
+                width: 90,
+                child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+              ),
               Expanded(
                 child: Text(
                   value,
@@ -2212,14 +2815,14 @@ class ErrorBanner extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: Theme.of(context).colorScheme.error.withOpacity(0.4)),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.s),
       child: Row(
         children: [
           Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.onErrorContainer),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.s),
           Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.w600))),
         ],
       ),
@@ -2234,15 +2837,16 @@ class StatusDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
-      width: 12,
-      height: 12,
+      width: AppSpacing.xs,
+      height: AppSpacing.xs,
       decoration: BoxDecoration(
-        color: ok ? const Color(0xff10b981) : const Color(0xffef4444),
+        color: ok ? colors.primary : colors.error,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: (ok ? const Color(0xff10b981) : const Color(0xffef4444)).withValues(alpha: 0.4),
+            color: (ok ? colors.primary : colors.error).withOpacity(0.4),
             blurRadius: 6,
             offset: const Offset(0, 0),
           ),
