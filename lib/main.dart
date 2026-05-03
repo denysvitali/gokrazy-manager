@@ -1157,8 +1157,8 @@ class _HomePageState extends State<HomePage> {
           selectedIndex: _activeNavIndex,
           onDestinationSelected: _syncRouteTab,
           destinations: [
-            NavigationBarDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-            NavigationBarDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
+            NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+            NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
           ],
         ),
       ),
