@@ -667,9 +667,11 @@ class _HomeShellState extends State<HomeShell> {
           if (!mounted || total <= 0) {
             return;
           }
+          final ratio = sent / total;
+          final progress = ratio.clamp(0.0, 1.0);
           setState(() {
             _uploadByInstance[instance.id] = _UploadState(
-              progress: sent / total,
+              progress: progress.toDouble(),
               message:
                   'Uploading ${file.name}${isGzipped ? ' (decompressing)' : ''}',
             );
