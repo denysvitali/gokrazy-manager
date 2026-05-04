@@ -74,7 +74,7 @@ class ServicesCard extends StatelessWidget {
                 services.length,
                 (index) {
                   final svc = services[index];
-                  final hasCompactCommandAction = !svc.running || svc.pid == null;
+                  const hasCompactCommandAction = true;
                   final row = _ServiceTile(
                     key: ValueKey('${svc.path}-$index'),
                     service: svc,
