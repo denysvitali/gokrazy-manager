@@ -186,15 +186,17 @@ class GokrazyClient {
 
       var sent = 0;
       Stream<List<int>> uploadStream = stream;
-      if (decompress) {
-        uploadStream = stream.transform(io.gzip.decoder);
-      }
-
-      final hashed = uploadStream.map((chunk) {
-        sent += chunk.length;
-        onProgress(sent, size);
-        return chunk;
-      });
+      final hashed = decompress
+          ? uploadStream.map((chunk) {
+              sent += chunk.length;
+              onProgress(sent, size);
+              return chunk;
+            }).transform(io.gzip.decoder)
+          : uploadStream.map((chunk) {
+              sent += chunk.length;
+              onProgress(sent, size);
+              return chunk;
+            });
       final sharedHashed = hashed.asBroadcastStream();
       final localHashFuture = sha256.bind(sharedHashed).first.then(
             (digest) => digest.toString(),
