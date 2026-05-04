@@ -177,6 +177,16 @@ class GokrazyClient {
     required void Function(int sent, int total) onProgress,
     bool decompress = false,
   }) async {
+    String formatBytesHex(List<int> bytes) {
+      return bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(' ');
+    }
+
+    String formatBytesAscii(List<int> bytes) {
+      return bytes
+          .map((byte) => byte >= 0x20 && byte <= 0x7e ? String.fromCharCode(byte) : '.')
+          .join();
+    }
+
     String? untrustedFingerprint;
     final client = _httpClient(
       onBadCertificate: (fingerprint) => untrustedFingerprint = fingerprint,
@@ -188,6 +198,24 @@ class GokrazyClient {
       var sent = 0;
       final inputBytes = <int>[];
       final uploadedBytes = <int>[];
+      var loggedPreview = false;
+      void logPreview() {
+        if (loggedPreview) {
+          return;
+        }
+        loggedPreview = true;
+        final isGzip = inputBytes.length >= 2 &&
+            inputBytes[0] == 0x1F &&
+            inputBytes[1] == 0x8B;
+        debugPrint(
+          'uploadRoot: input_gzip=$isGzip '
+          'input_hex=${formatBytesHex(inputBytes)} '
+          'input_ascii="${formatBytesAscii(inputBytes)}" '
+          'uploaded_hex=${formatBytesHex(uploadedBytes)} '
+          'uploaded_ascii="${formatBytesAscii(uploadedBytes)}"',
+        );
+      }
+
       final tap = StreamTransformer<List<int>, List<int>>.fromHandlers(
         handleData: (chunk, sink) {
           sent += chunk.length;
@@ -203,6 +231,9 @@ class GokrazyClient {
           if (uploadedBytes.length < 6) {
             uploadedBytes.addAll(chunk.take(6 - uploadedBytes.length));
           }
+          if (uploadedBytes.length >= 6) {
+            logPreview();
+          }
           sink.add(chunk);
         },
       );
@@ -217,21 +248,7 @@ class GokrazyClient {
           );
 
       await request.addStream(sharedHashed);
-      final isGzip = inputBytes.length >= 2 &&
-          inputBytes[0] == 0x1F &&
-          inputBytes[1] == 0x8B;
-      final inputBytesHex =
-          inputBytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(
-                ' ',
-              );
-      final uploadedBytesHex = uploadedBytes
-          .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
-          .join(' ');
-      debugPrint(
-        'uploadRoot: input_gzip=$isGzip '
-        'input_bytes=$inputBytesHex '
-        'uploaded_bytes=$uploadedBytesHex',
-      );
+      logPreview();
       final localHash = await localHashFuture;
       final response = await request.close();
       final body = (await response.transform(utf8.decoder).join()).trim();
