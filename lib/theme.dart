@@ -102,10 +102,6 @@ ThemeData buildAppTheme(Brightness brightness, {bool amoledBlack = false}) {
     alpha: dark ? 0.34 : 0.12,
   );
 
-  final base = ThemeData(
-    useMaterial3: true,
-    brightness: brightness,
-  );
   final textTheme = ThemeData(
     useMaterial3: true,
     brightness: brightness,

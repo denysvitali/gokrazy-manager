@@ -26,7 +26,6 @@ class HeroHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final brightness = theme.brightness;
     final hue = hueFromString(instance.id);
     final gradient = AppGradients.ofHue(hue, brightness: brightness);

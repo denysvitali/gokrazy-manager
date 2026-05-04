@@ -134,6 +134,7 @@ class _RunningBadge extends StatelessWidget {
 
 class _ServiceTile extends StatelessWidget {
   const _ServiceTile({
+    super.key,
     required this.service,
     required this.busy,
     required this.onStart,

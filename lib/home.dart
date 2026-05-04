@@ -67,7 +67,8 @@ class _HomeShellState extends State<HomeShell> {
     if (!mounted) {
       return;
     }
-    final location = GoRouter.of(context).location;
+    final location =
+        GoRouter.of(context).routerDelegate.currentConfiguration.uri.toString();
     if (location == _lastLocation) {
       return;
     }
@@ -392,7 +393,8 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   void _navigateToRoute(String destination) {
-    final current = GoRouter.of(context).location;
+    final current =
+        GoRouter.of(context).routerDelegate.currentConfiguration.uri.toString();
     if (current == destination) {
       return;
     }
@@ -1088,13 +1090,13 @@ class _ShellSkeleton extends StatelessWidget {
               ? Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const ConstrainedBox(
-                      constraints: BoxConstraints(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(
                         minWidth: 260,
                         maxWidth: 360,
                       ),
                       child: Column(
-                        children: [
+                        children: const [
                           SkeletonBlock(height: 88),
                           SizedBox(height: AppSpacing.s),
                           SkeletonBlock(height: 88),
@@ -1104,10 +1106,10 @@ class _ShellSkeleton extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.l),
-                    const Expanded(child: _DetailSkeleton()),
+                    Expanded(child: _DetailSkeleton()),
                   ],
                 )
-              : const Column(
+              : Column(
                   children: [
                     SkeletonBlock(height: 96),
                     SizedBox(height: AppSpacing.s),

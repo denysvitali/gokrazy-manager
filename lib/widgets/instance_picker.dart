@@ -60,6 +60,7 @@ class InstanceStrip extends StatelessWidget {
 
 class _InstanceTile extends StatelessWidget {
   const _InstanceTile({
+    super.key,
     required this.instance,
     required this.status,
     required this.error,
@@ -187,7 +188,10 @@ class _InstanceTile extends StatelessWidget {
 }
 
 class _AddTile extends StatelessWidget {
-  const _AddTile({required this.onTap});
+  const _AddTile({
+    super.key,
+    required this.onTap,
+  });
 
   final VoidCallback onTap;
 
