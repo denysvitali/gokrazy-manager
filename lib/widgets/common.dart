@@ -720,6 +720,8 @@ class InfoTile extends StatelessWidget {
     required this.label,
     required this.value,
     this.compact = false,
+    this.valueStyle,
+    this.labelStyle,
     super.key,
   });
 
@@ -727,6 +729,8 @@ class InfoTile extends StatelessWidget {
   final String label;
   final String value;
   final bool compact;
+  final TextStyle? labelStyle;
+  final TextStyle? valueStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -769,19 +773,21 @@ class InfoTile extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: dark
-                        ? Colors.white.withValues(alpha: 0.5)
-                        : Colors.black.withValues(alpha: 0.5),
-                    letterSpacing: 0.6,
-                  ),
+                  style: labelStyle ??
+                      theme.textTheme.labelSmall?.copyWith(
+                        color: dark
+                            ? Colors.white.withValues(alpha: 0.5)
+                            : Colors.black.withValues(alpha: 0.5),
+                        letterSpacing: 0.6,
+                      ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
+                  style: valueStyle ??
+                      theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                 ),

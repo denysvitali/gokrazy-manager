@@ -12,6 +12,8 @@ class InstanceStrip extends StatelessWidget {
     required this.errors,
     required this.loadingIds,
     required this.selectedId,
+    required this.selectedIds,
+    required this.onLongPress,
     required this.onSelect,
     required this.onAdd,
     super.key,
@@ -22,7 +24,9 @@ class InstanceStrip extends StatelessWidget {
   final Map<String, String> errors;
   final Set<String> loadingIds;
   final String? selectedId;
+  final Set<String> selectedIds;
   final ValueChanged<String> onSelect;
+  final ValueChanged<String> onLongPress;
   final VoidCallback onAdd;
 
   @override
@@ -40,6 +44,7 @@ class InstanceStrip extends StatelessWidget {
           }
           final instance = instances[index];
           final selected = selectedId == instance.id;
+          final selectedForBatch = selectedIds.contains(instance.id);
           final status = statuses[instance.id];
           final error = errors[instance.id];
           final isLoading = loadingIds.contains(instance.id);
@@ -50,7 +55,9 @@ class InstanceStrip extends StatelessWidget {
             error: error,
             isLoading: isLoading,
             selected: selected,
+            selectedForBatch: selectedForBatch,
             onTap: () => onSelect(instance.id),
+            onLongPress: () => onLongPress(instance.id),
           );
         },
       ),
@@ -66,7 +73,9 @@ class _InstanceTile extends StatelessWidget {
     required this.error,
     required this.isLoading,
     required this.selected,
+    required this.selectedForBatch,
     required this.onTap,
+    required this.onLongPress,
   });
 
   final GokrazyInstance instance;
@@ -74,13 +83,16 @@ class _InstanceTile extends StatelessWidget {
   final String? error;
   final bool isLoading;
   final bool selected;
+  final bool selectedForBatch;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final dark = theme.brightness == Brightness.dark;
+    final isMarked = selected || selectedForBatch;
     final tone = error != null
         ? StatusTone.error
         : status != null
@@ -105,19 +117,19 @@ class _InstanceTile extends StatelessWidget {
       curve: Curves.easeOutCubic,
       width: 200,
       decoration: BoxDecoration(
-        color: selected
+        color: isMarked
             ? selectedColor.withValues(alpha: dark ? 0.18 : 0.10)
             : baseBg,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
-          color: selected
+          color: isMarked
               ? selectedColor.withValues(alpha: 0.7)
               : (dark
                   ? Colors.white.withValues(alpha: 0.07)
                   : Colors.black.withValues(alpha: 0.06)),
-          width: selected ? 1.6 : 1,
+          width: isMarked ? 1.6 : 1,
         ),
-        boxShadow: selected
+        boxShadow: isMarked
             ? [
                 BoxShadow(
                   color: selectedColor.withValues(alpha: 0.22),
@@ -132,6 +144,7 @@ class _InstanceTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.lg),
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.s,
@@ -178,6 +191,12 @@ class _InstanceTile extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (selectedForBatch)
+                  Icon(
+                    Icons.check_circle_rounded,
+                    color: selectedColor,
+                    size: 22,
+                  ),
               ],
             ),
           ),
@@ -313,6 +332,8 @@ class InstanceSidebar extends StatelessWidget {
     required this.errors,
     required this.loadingIds,
     required this.selectedId,
+    required this.selectedIds,
+    required this.onLongPress,
     required this.onSelect,
     required this.onAdd,
     required this.onRefresh,
@@ -324,7 +345,9 @@ class InstanceSidebar extends StatelessWidget {
   final Map<String, String> errors;
   final Set<String> loadingIds;
   final String? selectedId;
+  final Set<String> selectedIds;
   final ValueChanged<String> onSelect;
+  final ValueChanged<String> onLongPress;
   final VoidCallback onAdd;
   final ValueChanged<GokrazyInstance> onRefresh;
 
@@ -367,6 +390,7 @@ class InstanceSidebar extends StatelessWidget {
             itemBuilder: (context, index) {
               final instance = instances[index];
               final selected = selectedId == instance.id;
+              final selectedForBatch = selectedIds.contains(instance.id);
               final status = statuses[instance.id];
               final error = errors[instance.id];
               final isLoading = loadingIds.contains(instance.id);
@@ -376,7 +400,9 @@ class InstanceSidebar extends StatelessWidget {
                 error: error,
                 isLoading: isLoading,
                 selected: selected,
+                selectedForBatch: selectedForBatch,
                 onTap: () => onSelect(instance.id),
+                onLongPress: () => onLongPress(instance.id),
                 onRefresh: () => onRefresh(instance),
               );
             },
@@ -394,7 +420,9 @@ class _SidebarTile extends StatelessWidget {
     required this.error,
     required this.isLoading,
     required this.selected,
+    required this.selectedForBatch,
     required this.onTap,
+    required this.onLongPress,
     required this.onRefresh,
   });
 
@@ -403,7 +431,9 @@ class _SidebarTile extends StatelessWidget {
   final String? error;
   final bool isLoading;
   final bool selected;
+  final bool selectedForBatch;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
   final VoidCallback onRefresh;
 
   @override
@@ -411,6 +441,7 @@ class _SidebarTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final dark = theme.brightness == Brightness.dark;
+    final isMarked = selected || selectedForBatch;
     final tone = error != null
         ? StatusTone.error
         : status != null
@@ -435,19 +466,19 @@ class _SidebarTile extends StatelessWidget {
       duration: motionDuration(context, AppMotion.fast),
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        color: selected
+        color: isMarked
             ? scheme.primary.withValues(alpha: dark ? 0.16 : 0.10)
             : (dark ? AppPalette.slate800 : Colors.white),
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
-          color: selected
+          color: isMarked
               ? scheme.primary.withValues(alpha: 0.65)
               : (dark
                   ? Colors.white.withValues(alpha: 0.07)
                   : Colors.black.withValues(alpha: 0.06)),
-          width: selected ? 1.6 : 1,
+          width: isMarked ? 1.6 : 1,
         ),
-        boxShadow: selected
+        boxShadow: isMarked
             ? [
                 BoxShadow(
                   color: scheme.primary.withValues(alpha: 0.18),
@@ -462,6 +493,7 @@ class _SidebarTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.lg),
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.s + 2),
             child: Row(
@@ -471,10 +503,17 @@ class _SidebarTile extends StatelessWidget {
                   label: instance.name,
                   size: 48,
                   statusTone: tone,
-                ),
-                const SizedBox(width: AppSpacing.s),
-                Expanded(
-                  child: Column(
+                  ),
+                  const SizedBox(width: AppSpacing.s),
+                  if (selectedForBatch)
+                    Icon(
+                      Icons.check_circle_rounded,
+                      size: 18,
+                      color: scheme.primary,
+                    ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [

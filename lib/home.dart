@@ -38,6 +38,7 @@ class _HomeShellState extends State<HomeShell> {
   final Map<String, String> _errors = {};
   final Set<String> _statusLoading = {};
   final Set<String> _busyInstances = {};
+  final Set<String> _selectedInstanceIds = {};
   String? _selectedId;
   bool _loading = true;
   String _lastLocation = '';
@@ -139,6 +140,7 @@ class _HomeShellState extends State<HomeShell> {
     setState(() {
       _repo = repo;
       _instances = instances;
+      _selectedInstanceIds.clear();
       _selectedId = instances.isEmpty ? null : instances.first.id;
       _loading = false;
     });
@@ -255,51 +257,107 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _deleteInstance(GokrazyInstance instance) async {
+    await _deleteInstances({instance.id});
+  }
+
+  Future<void> _deleteInstances(Set<String> ids) async {
+    if (ids.isEmpty) {
+      return;
+    }
     final repo = _repo;
     if (repo == null) {
       return;
     }
+
+    final selected = _instances.where((entry) => ids.contains(entry.id)).toList();
+    if (selected.isEmpty) {
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete ${instance.name}?'),
-        content: const Text(
-          'The connection details and pinned certificate will be removed '
-          'from this device.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+      builder: (context) {
+        final count = selected.length;
+        if (count == 1) {
+          return AlertDialog(
+            title: Text('Delete ${selected.first.name}?'),
+            content: const Text(
+              'The connection details and pinned certificate will be removed '
+              'from this device.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: const Text('Delete'),
+              ),
+            ],
+          );
+        }
+        return AlertDialog(
+          title: Text('Delete $count instances?'),
+          content: Text(
+            'You are about to remove ${selected.map((entry) => entry.name).join(', ')}. '
+            'Their connection details and pinned certificates will be removed.',
           ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.delete_outline_rounded),
-            label: const Text('Delete'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) {
       return;
     }
-    final next = _instances.where((entry) => entry.id != instance.id).toList();
+
+    final idSet = ids.toSet();
+    final next = _instances.where((entry) => !idSet.contains(entry.id)).toList();
+    for (final id in idSet) {
+      await repo.deletePassword(id);
+    }
     await repo.saveAll(next);
-    await repo.deletePassword(instance.id);
+
     if (!mounted) {
       return;
     }
+
+    for (final id in idSet) {
+      _statuses.remove(id);
+      _errors.remove(id);
+      _uploadByInstance.remove(id);
+      _busyInstances.remove(id);
+      _selectedInstanceIds.remove(id);
+    }
+
+    final selectedStillExists = _selectedId != null &&
+        next.any((entry) => entry.id == _selectedId);
+    final nextSelectedId = selectedStillExists
+        ? _selectedId
+        : (next.isEmpty ? null : next.first.id);
+
     setState(() {
       _instances = next;
-      _statuses.remove(instance.id);
-      _errors.remove(instance.id);
-      _uploadByInstance.remove(instance.id);
-      _busyInstances.remove(instance.id);
-      _selectedId = next.isEmpty ? null : next.first.id;
+      _selectedId = nextSelectedId;
     });
     if (_routeTab == 0) {
       _persistRouteForSelection();
     }
+  }
+
+  Future<void> _deleteSelectedInstances() async {
+    await _deleteInstances(_selectedInstanceIds.toSet());
   }
 
   Future<bool> _confirmCertificate(String fingerprint) async {
@@ -374,7 +432,31 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
+  void _toggleInstanceSelection(String id) {
+    if (!_instances.any((entry) => entry.id == id)) {
+      return;
+    }
+    setState(() {
+      if (_selectedInstanceIds.contains(id)) {
+        _selectedInstanceIds.remove(id);
+      } else {
+        _selectedInstanceIds.add(id);
+      }
+    });
+  }
+
+  void _clearInstanceSelection() {
+    if (_selectedInstanceIds.isEmpty) {
+      return;
+    }
+    setState(() => _selectedInstanceIds.clear());
+  }
+
   void _selectInstance(String id) {
+    if (_selectedInstanceIds.isNotEmpty) {
+      _toggleInstanceSelection(id);
+      return;
+    }
     if (!_instances.any((entry) => entry.id == id)) {
       return;
     }
@@ -383,6 +465,7 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   void _switchTab(int index) {
+    _clearInstanceSelection();
     if (index == 1) {
       _navigateToRoute('/settings');
     } else if (_selectedId != null) {
@@ -406,6 +489,7 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _openEditor([GokrazyInstance? instance]) async {
+    _clearInstanceSelection();
     final password = instance == null
         ? ''
         : await _repo?.passwordFor(instance.id) ?? '';
@@ -737,6 +821,10 @@ class _HomeShellState extends State<HomeShell> {
         .where((entry) => entry.id == _selectedId)
         .cast<GokrazyInstance?>()
         .firstWhere((entry) => true, orElse: () => null);
+    final location =
+        GoRouter.of(context).routerDelegate.currentConfiguration.uri;
+    final isInstanceDetailRoute = location.pathSegments.length == 2 &&
+        location.pathSegments.first == 'instance';
 
     final body = AnimatedSwitcher(
       duration: motionDuration(context, AppMotion.fast),
@@ -744,7 +832,7 @@ class _HomeShellState extends State<HomeShell> {
           ? const _ShellSkeleton()
           : _routeTab == 1
               ? const SettingsPanel()
-              : _buildDashboard(context, selected),
+              : _buildDashboard(context, selected, isInstanceDetailRoute),
     );
 
     final scaffold = Scaffold(
@@ -816,6 +904,18 @@ class _HomeShellState extends State<HomeShell> {
 
   PreferredSizeWidget _buildAppBar(GokrazyInstance? selected) {
     final theme = Theme.of(context);
+    final selectedCount = _selectedInstanceIds.length;
+    final isSelectionMode = selectedCount > 0;
+    GokrazyInstance? selectedForEdit;
+    if (isSelectionMode && _selectedInstanceIds.length == 1) {
+      final id = _selectedInstanceIds.first;
+      for (final instance in _instances) {
+        if (instance.id == id) {
+          selectedForEdit = instance;
+          break;
+        }
+      }
+    }
     return AppBar(
       titleSpacing: AppSpacing.m,
       title: Row(
@@ -828,7 +928,7 @@ class _HomeShellState extends State<HomeShell> {
           const SizedBox(width: AppSpacing.s),
           Flexible(
             child: Text(
-              'Gokrazy',
+              isSelectionMode ? '$selectedCount selected' : 'Gokrazy',
               style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.4,
@@ -839,16 +939,45 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ],
       ),
+      leading: isSelectionMode
+          ? IconButton(
+              tooltip: 'Exit select mode',
+              onPressed: _clearInstanceSelection,
+              icon: const Icon(Icons.close_rounded),
+            )
+          : null,
       actions: [
+        if (isSelectionMode && selectedForEdit != null)
+          Semantics(
+            button: true,
+            label: 'Edit selected appliance',
+            hint: 'Open edit sheet for selected appliance',
+            child: IconButton(
+              tooltip: 'Edit selected',
+              onPressed: () => _openEditor(selectedForEdit),
+              icon: const Icon(Icons.edit_rounded),
+            ),
+          ),
+        if (isSelectionMode)
+          Semantics(
+            button: true,
+            label: 'Delete selected appliances',
+            hint: 'Delete all selected appliances',
+            child: IconButton(
+              tooltip: 'Delete selected',
+              onPressed: _deleteSelectedInstances,
+              icon: const Icon(Icons.delete_sweep_rounded),
+            ),
+          ),
         if (_routeTab == 0 && _instances.isNotEmpty)
           Semantics(
             button: true,
             label: 'Refresh selected appliance',
             hint: 'Fetch latest status for the selected appliance',
             child: IconButton(
-            tooltip: 'Refresh selected',
-            onPressed: selected == null ? null : () => _refresh(selected),
-            icon: const Icon(Icons.refresh_rounded),
+              tooltip: 'Refresh selected',
+              onPressed: selected == null ? null : () => _refresh(selected),
+              icon: const Icon(Icons.refresh_rounded),
             ),
           ),
         if (_routeTab == 0 && _instances.isNotEmpty)
@@ -857,9 +986,9 @@ class _HomeShellState extends State<HomeShell> {
             label: 'Refresh all appliances',
             hint: 'Fetch latest status from all appliances',
             child: IconButton(
-            tooltip: 'Refresh all',
-            onPressed: _loading ? null : _refreshAll,
-            icon: const Icon(Icons.sync_rounded),
+              tooltip: 'Refresh all',
+              onPressed: _loading ? null : _refreshAll,
+              icon: const Icon(Icons.sync_rounded),
             ),
           ),
         const SizedBox(width: AppSpacing.xs),
@@ -867,7 +996,7 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  Widget _buildDashboard(BuildContext context, GokrazyInstance? selected) {
+  Widget _buildDashboard(BuildContext context, GokrazyInstance? selected, bool showDetail) {
     if (_instances.isEmpty) {
       return EmptyState(
         title: 'No appliances yet',
@@ -877,6 +1006,11 @@ class _HomeShellState extends State<HomeShell> {
         icon: Icons.dns_rounded,
       );
     }
+
+    if (showDetail) {
+      return _buildDetail(selected);
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth >= AppBreakpoints.desktop;
@@ -889,31 +1023,26 @@ class _HomeShellState extends State<HomeShell> {
                   AppSpacing.l,
                   AppSpacing.l,
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        minWidth: 260,
-                        maxWidth: 360,
-                      ),
-                      child: InstanceSidebar(
-                        instances: _instances,
-                        statuses: _statuses,
-                        errors: _errors,
-                        loadingIds: _statusLoading,
-                        selectedId: _selectedId,
-                        onSelect: _selectInstance,
-                        onAdd: () => _openEditor(),
-                        onRefresh: _refresh,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.l),
-                    Expanded(child: _buildDetail(selected)),
-                  ],
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 260,
+                    maxWidth: 420,
+                  ),
+                  child: InstanceSidebar(
+                    instances: _instances,
+                    statuses: _statuses,
+                    errors: _errors,
+                    loadingIds: _statusLoading,
+                    selectedId: _selectedId,
+                    onSelect: _selectInstance,
+                    selectedIds: _selectedInstanceIds,
+                    onLongPress: _toggleInstanceSelection,
+                    onAdd: () => _openEditor(),
+                    onRefresh: _refresh,
+                  ),
                 ),
               )
-            : isTablet
+                    : isTablet
                 ? Column(
                     children: [
                       const SizedBox(height: AppSpacing.s),
@@ -923,11 +1052,11 @@ class _HomeShellState extends State<HomeShell> {
                         errors: _errors,
                         loadingIds: _statusLoading,
                         selectedId: _selectedId,
+                        selectedIds: _selectedInstanceIds,
+                        onLongPress: _toggleInstanceSelection,
                         onSelect: _selectInstance,
                         onAdd: () => _openEditor(),
                       ),
-                      const SizedBox(height: AppSpacing.s),
-                      Expanded(child: _buildDetail(selected)),
                     ],
                   )
                 : Column(
@@ -939,11 +1068,11 @@ class _HomeShellState extends State<HomeShell> {
                         errors: _errors,
                         loadingIds: _statusLoading,
                         selectedId: _selectedId,
+                        selectedIds: _selectedInstanceIds,
+                        onLongPress: _toggleInstanceSelection,
                         onSelect: _selectInstance,
                         onAdd: () => _openEditor(),
                       ),
-                      const SizedBox(height: AppSpacing.s),
-                      Expanded(child: _buildDetail(selected)),
                     ],
                   );
       },

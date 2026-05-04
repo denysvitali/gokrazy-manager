@@ -44,28 +44,43 @@ class OverviewCard extends StatelessWidget {
                     icon: Icons.developer_board_rounded,
                     label: 'MODEL',
                     value: status.model ?? 'Unknown',
+                    valueStyle: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                   InfoTile(
                     icon: Icons.terminal_rounded,
                     label: 'KERNEL',
                     value: status.kernel ?? 'Unknown',
+                    valueStyle: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                   InfoTile(
                     icon: Icons.dns_rounded,
                     label: 'HOSTNAME',
                     value: status.hostname ?? 'Unknown',
+                    valueStyle: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                   if (status.buildTimestamp != null)
                     InfoTile(
                       icon: Icons.schedule_rounded,
                       label: 'BUILD',
                       value: status.buildTimestamp!,
+                      valueStyle: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   if (status.sbomHash != null)
                     InfoTile(
                       icon: Icons.fingerprint_rounded,
                       label: 'SBOM',
                       value: status.sbomHash!,
+                      valueStyle: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                 ],
               );
