@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:io' as io;
 
-import 'package:convert/convert.dart' show AccumulatorSink;
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -186,9 +185,6 @@ class GokrazyClient {
       _setHeaders(request);
 
       var sent = 0;
-      final output = AccumulatorSink<Digest>();
-      final input = sha256.startChunkedConversion(output);
-
       Stream<List<int>> uploadStream = stream;
       if (decompress) {
         uploadStream = stream.transform(io.gzip.decoder);
@@ -196,29 +192,22 @@ class GokrazyClient {
 
       final hashed = uploadStream.map((chunk) {
         sent += chunk.length;
-        input.add(chunk);
         onProgress(sent, size);
         return chunk;
       });
+      final sharedHashed = hashed.asBroadcastStream();
+      final localHashFuture = sha256.bind(sharedHashed).first.then(
+            (digest) => digest.toString(),
+          );
 
-      await request.addStream(hashed);
-      await input.close();
+      await request.addStream(sharedHashed);
+      final localHash = await localHashFuture;
       final response = await request.close();
       final body = (await response.transform(utf8.decoder).join()).trim();
       if (response.statusCode != HttpStatus.ok) {
         throw HttpException('HTTP ${response.statusCode}: $body');
       }
-      final localHashes = output.events.toList();
-      if (localHashes.isEmpty) {
-        throw StateError(
-            'No local hash emitted while hashing upload stream. '
-            'This usually means the upload stream was interrupted.');
-      }
-      if (localHashes.length != 1) {
-        throw StateError(
-            'Expected exactly one local hash from upload stream, got ${localHashes.length}.');
-      }
-      final localHash = localHashes.single.toString();
+
       if (body != localHash) {
         throw StateError(
             'Checksum mismatch: device returned $body, sent $localHash');
