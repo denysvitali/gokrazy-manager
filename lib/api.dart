@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:io' as io;
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -185,24 +186,52 @@ class GokrazyClient {
       _setHeaders(request);
 
       var sent = 0;
-      Stream<List<int>> uploadStream = stream;
+      final inputBytes = <int>[];
+      final uploadedBytes = <int>[];
+      final tap = StreamTransformer<List<int>, List<int>>.fromHandlers(
+        handleData: (chunk, sink) {
+          sent += chunk.length;
+          onProgress(sent, size);
+          if (inputBytes.length < 6) {
+            inputBytes.addAll(chunk.take(6 - inputBytes.length));
+          }
+          sink.add(chunk);
+        },
+      );
+      final outputTap = StreamTransformer<List<int>, List<int>>.fromHandlers(
+        handleData: (chunk, sink) {
+          if (uploadedBytes.length < 6) {
+            uploadedBytes.addAll(chunk.take(6 - uploadedBytes.length));
+          }
+          sink.add(chunk);
+        },
+      );
+
+      Stream<List<int>> uploadStream = stream.transform(tap);
       final hashed = decompress
-          ? uploadStream.map((chunk) {
-              sent += chunk.length;
-              onProgress(sent, size);
-              return chunk;
-            }).transform(io.gzip.decoder)
-          : uploadStream.map((chunk) {
-              sent += chunk.length;
-              onProgress(sent, size);
-              return chunk;
-            });
+          ? uploadStream.transform(io.gzip.decoder).transform(outputTap)
+          : uploadStream.transform(outputTap);
       final sharedHashed = hashed.asBroadcastStream();
       final localHashFuture = sha256.bind(sharedHashed).first.then(
             (digest) => digest.toString(),
           );
 
       await request.addStream(sharedHashed);
+      final isGzip = inputBytes.length >= 2 &&
+          inputBytes[0] == 0x1F &&
+          inputBytes[1] == 0x8B;
+      final inputBytesHex =
+          inputBytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(
+                ' ',
+              );
+      final uploadedBytesHex = uploadedBytes
+          .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+          .join(' ');
+      debugPrint(
+        'uploadRoot: input_gzip=$isGzip '
+        'input_bytes=$inputBytesHex '
+        'uploaded_bytes=$uploadedBytesHex',
+      );
       final localHash = await localHashFuture;
       final response = await request.close();
       final body = (await response.transform(utf8.decoder).join()).trim();
