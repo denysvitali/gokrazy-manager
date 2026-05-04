@@ -853,26 +853,14 @@ class _HomeShellState extends State<HomeShell> {
     }
     return AppBar(
       titleSpacing: AppSpacing.m,
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GradientIconBadge(
-            icon: Icons.developer_board_rounded,
-            size: 36,
-          ),
-          const SizedBox(width: AppSpacing.s),
-          Flexible(
-            child: Text(
-              isSelectionMode ? '$selectedCount selected' : 'Gokrazy',
-              style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.4,
-                  ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+      title: Text(
+        isSelectionMode ? '$selectedCount selected' : (selected?.name ?? 'Gokrazy'),
+        style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
             ),
-          ),
-        ],
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
       leading: isSelectionMode
           ? IconButton(
@@ -903,10 +891,10 @@ class _HomeShellState extends State<HomeShell> {
             onPressed: _deleteSelectedInstances,
           ),
         if (_routeTab == 0 && _instances.isNotEmpty)
-          _appBarAction(
-            icon: Icons.refresh_rounded,
-            label: 'Refresh',
+          IconButton(
+            tooltip: 'Refresh',
             onPressed: selected == null ? null : () => _refresh(selected),
+            icon: const Icon(Icons.refresh_rounded),
           ),
         const SizedBox(width: AppSpacing.xs),
       ],
