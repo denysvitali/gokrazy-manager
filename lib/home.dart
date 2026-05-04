@@ -486,9 +486,8 @@ class _HomeShellState extends State<HomeShell> {
     _clearInstanceSelection();
     if (index == 1) {
       _navigateToRoute('/settings');
-    } else if (_selectedId != null) {
-      _navigateToRoute('/instance/$_selectedId');
     } else {
+      setState(() => _selectedId = null);
       _navigateToRoute('/');
     }
   }
