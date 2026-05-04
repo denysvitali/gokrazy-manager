@@ -765,13 +765,15 @@ class _HomeShellState extends State<HomeShell> {
               : _buildDashboard(context, selected, isInstanceDetailRoute),
     );
 
-    final routedBody = WillPopScope(
-      onWillPop: () async {
-        if (isInstanceDetailRoute) {
+    final canPop = !isInstanceDetailRoute;
+    final isDetail = isInstanceDetailRoute;
+
+    final routedBody = PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && isDetail && mounted) {
           _navigateToRoute('/');
-          return false;
         }
-        return true;
       },
       child: body,
     );
