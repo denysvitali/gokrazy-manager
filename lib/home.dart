@@ -835,8 +835,19 @@ class _HomeShellState extends State<HomeShell> {
               : _buildDashboard(context, selected, isInstanceDetailRoute),
     );
 
+    final routedBody = WillPopScope(
+      onWillPop: () async {
+        if (_routeTab == 0 && isInstanceDetailRoute) {
+          _navigateToRoute('/');
+          return false;
+        }
+        return true;
+      },
+      child: body,
+    );
+
     final scaffold = Scaffold(
-      appBar: _buildAppBar(selected),
+      appBar: _buildAppBar(selected, isInstanceDetailRoute),
       floatingActionButton: _routeTab == 0 && !_loading
               ? FloatingActionButton.extended(
                   onPressed: () => _openEditor(),
@@ -844,7 +855,7 @@ class _HomeShellState extends State<HomeShell> {
                   label: const Text('Add appliance'),
                 )
               : null,
-      body: SafeArea(child: body),
+      body: SafeArea(child: routedBody),
       bottomNavigationBar: useRail
           ? null
           : NavigationBar(
@@ -902,7 +913,10 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(GokrazyInstance? selected) {
+  PreferredSizeWidget _buildAppBar(
+    GokrazyInstance? selected,
+    bool isInstanceDetailRoute,
+  ) {
     final theme = Theme.of(context);
     final selectedCount = _selectedInstanceIds.length;
     final isSelectionMode = selectedCount > 0;
@@ -945,6 +959,12 @@ class _HomeShellState extends State<HomeShell> {
               onPressed: _clearInstanceSelection,
               icon: const Icon(Icons.close_rounded),
             )
+          : isInstanceDetailRoute
+              ? IconButton(
+                  tooltip: 'Back',
+                  onPressed: () => _navigateToRoute('/'),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                )
           : null,
       actions: [
         if (isSelectionMode && selectedForEdit != null)
@@ -1043,35 +1063,39 @@ class _HomeShellState extends State<HomeShell> {
                 ),
               )
                     : isTablet
-                ? Column(
-                    children: [
-                      const SizedBox(height: AppSpacing.s),
-                      InstanceStrip(
-                        instances: _instances,
-                        statuses: _statuses,
-                        errors: _errors,
-                        loadingIds: _statusLoading,
-                        selectedId: _selectedId,
-                        selectedIds: _selectedInstanceIds,
-                        onLongPress: _toggleInstanceSelection,
-                        onSelect: _selectInstance,
-                        onAdd: () => _openEditor(),
-                      ),
-                    ],
+                    ? Column(
+                        children: [
+                          const SizedBox(height: AppSpacing.s),
+                          Expanded(
+                            child: InstanceStrip(
+                              instances: _instances,
+                              statuses: _statuses,
+                              errors: _errors,
+                              loadingIds: _statusLoading,
+                              selectedId: _selectedId,
+                              selectedIds: _selectedInstanceIds,
+                              onLongPress: _toggleInstanceSelection,
+                              onSelect: _selectInstance,
+                              onAdd: () => _openEditor(),
+                            ),
+                          ),
+                        ],
                   )
                 : Column(
                     children: [
                       const SizedBox(height: AppSpacing.s),
-                      InstanceStrip(
-                        instances: _instances,
-                        statuses: _statuses,
-                        errors: _errors,
-                        loadingIds: _statusLoading,
-                        selectedId: _selectedId,
-                        selectedIds: _selectedInstanceIds,
-                        onLongPress: _toggleInstanceSelection,
-                        onSelect: _selectInstance,
-                        onAdd: () => _openEditor(),
+                      Expanded(
+                        child: InstanceStrip(
+                          instances: _instances,
+                          statuses: _statuses,
+                          errors: _errors,
+                          loadingIds: _statusLoading,
+                          selectedId: _selectedId,
+                          selectedIds: _selectedInstanceIds,
+                          onLongPress: _toggleInstanceSelection,
+                          onSelect: _selectInstance,
+                          onAdd: () => _openEditor(),
+                        ),
                       ),
                     ],
                   );

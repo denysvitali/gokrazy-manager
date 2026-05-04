@@ -32,12 +32,10 @@ class InstanceStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 96,
       child: ListView.separated(
-        scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
         itemCount: instances.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.s),
+        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s),
         itemBuilder: (context, index) {
           if (index == instances.length) {
             return _AddTile(key: const ValueKey('instance-add-tile'), onTap: onAdd);
@@ -115,7 +113,6 @@ class _InstanceTile extends StatelessWidget {
     return AnimatedContainer(
       duration: motionDuration(context, AppMotion.fast),
       curve: Curves.easeOutCubic,
-      width: 200,
       decoration: BoxDecoration(
         color: isMarked
             ? selectedColor.withValues(alpha: dark ? 0.18 : 0.10)
