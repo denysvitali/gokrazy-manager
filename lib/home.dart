@@ -40,6 +40,8 @@ class _HomeShellState extends State<HomeShell> {
   final Set<String> _busyInstances = {};
   final Set<String> _selectedInstanceIds = {};
   String? _selectedId;
+  String? _detailTabInstanceId;
+  int _detailTabIndex = 0;
   bool _loading = true;
   String _lastLocation = '';
 
@@ -106,16 +108,33 @@ class _HomeShellState extends State<HomeShell> {
         return;
       }
       if (resolved != _selectedId) {
-        setState(() => _selectedId = resolved);
+        setState(() {
+          _selectedId = resolved;
+          _detailTabInstanceId = resolved;
+          _detailTabIndex = 0;
+        });
+      }
+      if (_selectedInstanceIds.isNotEmpty) {
+        setState(() {
+          _selectedInstanceIds.clear();
+        });
       }
       return;
     }
 
     if (_selectedId != null && !_instances.any((entry) => entry.id == _selectedId)) {
-      setState(() => _selectedId = _instances.isEmpty ? null : _instances.first.id);
+      setState(() {
+        _selectedId = _instances.isEmpty ? null : _instances.first.id;
+        _detailTabInstanceId = _selectedId;
+        _detailTabIndex = 0;
+      });
     }
     if (_selectedId == null && _instances.isNotEmpty) {
-      setState(() => _selectedId = _instances.first.id);
+      setState(() {
+        _selectedId = _instances.first.id;
+        _detailTabInstanceId = _selectedId;
+        _detailTabIndex = 0;
+      });
     }
   }
 
@@ -142,6 +161,8 @@ class _HomeShellState extends State<HomeShell> {
       _instances = instances;
       _selectedInstanceIds.clear();
       _selectedId = instances.isEmpty ? null : instances.first.id;
+      _detailTabInstanceId = _selectedId;
+      _detailTabIndex = 0;
       _loading = false;
     });
     unawaited(_refreshAll());
@@ -460,7 +481,11 @@ class _HomeShellState extends State<HomeShell> {
     if (!_instances.any((entry) => entry.id == id)) {
       return;
     }
-    setState(() => _selectedId = id);
+    setState(() {
+      _selectedId = id;
+      _detailTabInstanceId = id;
+      _detailTabIndex = 0;
+    });
     _navigateToRoute('/instance/$id');
   }
 
@@ -959,12 +984,19 @@ class _HomeShellState extends State<HomeShell> {
               onPressed: _clearInstanceSelection,
               icon: const Icon(Icons.close_rounded),
             )
-          : isInstanceDetailRoute
+                : isInstanceDetailRoute
               ? IconButton(
-                  tooltip: 'Back',
-                  onPressed: () => _navigateToRoute('/'),
-                  icon: const Icon(Icons.arrow_back_rounded),
-                )
+              tooltip: 'Back',
+              onPressed: () {
+                final navigator = Navigator.of(context);
+                if (navigator.canPop()) {
+                  navigator.pop();
+                } else {
+                  _navigateToRoute('/');
+                }
+              },
+              icon: const Icon(Icons.arrow_back_rounded),
+            )
           : null,
       actions: [
         if (isSelectionMode && selectedForEdit != null)
@@ -1067,18 +1099,17 @@ class _HomeShellState extends State<HomeShell> {
                         children: [
                           const SizedBox(height: AppSpacing.s),
                           Expanded(
-                            child: InstanceStrip(
-                              instances: _instances,
-                              statuses: _statuses,
-                              errors: _errors,
-                              loadingIds: _statusLoading,
-                              selectedId: _selectedId,
-                              selectedIds: _selectedInstanceIds,
-                              onLongPress: _toggleInstanceSelection,
-                              onSelect: _selectInstance,
-                              onAdd: () => _openEditor(),
-                            ),
-                          ),
+                    child: InstanceStrip(
+                      instances: _instances,
+                      statuses: _statuses,
+                      errors: _errors,
+                      loadingIds: _statusLoading,
+                      selectedId: _selectedId,
+                      selectedIds: _selectedInstanceIds,
+                      onLongPress: _toggleInstanceSelection,
+                      onSelect: _selectInstance,
+                    ),
+                  ),
                         ],
                   )
                 : Column(
@@ -1094,7 +1125,6 @@ class _HomeShellState extends State<HomeShell> {
                           selectedIds: _selectedInstanceIds,
                           onLongPress: _toggleInstanceSelection,
                           onSelect: _selectInstance,
-                          onAdd: () => _openEditor(),
                         ),
                       ),
                     ],
@@ -1112,6 +1142,18 @@ class _HomeShellState extends State<HomeShell> {
     final loading = _statusLoading.contains(instance.id) && status == null;
     final busy = _busyInstances.contains(instance.id);
     final upload = _uploadByInstance[instance.id];
+    final tabs = status == null ? const <_InstanceTab>[] : _tabsForStatus(status);
+    final tabIndex = _detailTabInstanceId != instance.id ||
+            _detailTabIndex >= tabs.length
+        ? 0
+        : _detailTabIndex;
+    if (tabIndex != _detailTabIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _detailTabIndex = tabIndex);
+        }
+      });
+    }
 
     return RefreshIndicator(
       onRefresh: () => _refresh(instance),
@@ -1145,11 +1187,11 @@ class _HomeShellState extends State<HomeShell> {
               onEdit: () => _openEditor(instance),
               onDelete: () => _deleteInstance(instance),
             ),
-            if (error != null) ...[
-              const SizedBox(height: AppSpacing.m),
-              Semantics(
-                liveRegion: true,
-                child: ErrorBanner(
+          if (error != null) ...[
+            const SizedBox(height: AppSpacing.m),
+            Semantics(
+              liveRegion: true,
+              child: ErrorBanner(
                   message: error,
                   onRetry: () => _refresh(instance),
                 ),
@@ -1157,62 +1199,244 @@ class _HomeShellState extends State<HomeShell> {
             ],
             const SizedBox(height: AppSpacing.m),
             if (status != null) ...[
-              OverviewCard(status: status),
-              const SizedBox(height: AppSpacing.m),
-              ResourceCard(status: status),
-              const SizedBox(height: AppSpacing.m),
-              UpdateCard(
-                busy: busy,
-                progress: upload?.progress,
-                message: upload?.message,
-                onUpload: () => _uploadSquashfs(instance),
-                onTestboot: () => _runAction(
-                  instance,
-                  'Test boot marked',
-                  (client) => client.testboot(),
+              if (tabs.isNotEmpty) ...[
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SegmentedButton<int>(
+                    segments: [
+                      for (final tab in tabs)
+                        ButtonSegment<int>(
+                          value: tab.index,
+                          label: Text(tab.label),
+                          icon: Icon(tab.icon),
+                        ),
+                    ],
+                    selected: <int>{tabs[tabIndex].index},
+                    onSelectionChanged: (selected) {
+                      final next = selected.first;
+                      setState(() => _detailTabIndex = next);
+                    },
+                  ),
                 ),
-                onSwitch: () => _runAction(
-                  instance,
-                  'Root switched',
-                  (client) => client.switchRoot(),
+                const SizedBox(height: AppSpacing.m),
+                AnimatedSwitcher(
+                  duration: motionDuration(context, AppMotion.fast),
+                    child: _detailTabBody(
+                    instance: instance,
+                    status: status,
+                    tabIndex: tabIndex,
+                    tabs: tabs,
+                    busy: busy,
+                    upload: upload,
+                  ),
                 ),
-                onReboot: () => _runAction(
-                  instance,
-                  'Reboot requested',
-                  (client) => client.reboot(),
+              ] else
+                const EmptyState(
+                  title: 'No detail sections',
+                  message: 'This appliance returned no actionable status fields.',
+                  icon: Icons.remove_red_eye_outlined,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.m),
-              ServicesCard(
-                services: status.services,
-                busy: busy,
-                onStart: (svc) => _runServiceAction(
-                  instance,
-                  'Service started',
-                  svc,
-                  (client) => client.startService(svc.path),
-                ),
-                onStop: (svc) => _runServiceAction(
-                  instance,
-                  'Service stopped',
-                  svc,
-                  (client) => client.stopService(svc.path),
-                ),
-                onRestart: (svc) => _runServiceAction(
-                  instance,
-                  'Service restarted',
-                  svc,
-                  (client) => client.restartService(svc.path),
-                ),
-                onLogs: (svc) => _openServiceLogs(instance, svc),
-                onArgs: _showServiceArgs,
-              ),
             ],
           ],
         ),
       ),
     );
   }
+
+  List<_InstanceTab> _tabsForStatus(GokrazyStatus status) {
+    final tabs = <_InstanceTab>[
+      _InstanceTab(
+        index: 0,
+        label: 'Overview',
+        icon: Icons.dashboard_customize_rounded,
+        builder: (context, instance, status, busy, upload) =>
+            _buildOverviewSection(
+              status: status,
+            ),
+      ),
+    ];
+
+    final hasResourceData = status.memTotal != null ||
+        status.memAvailable != null ||
+        status.permTotal != null ||
+        status.permUsed != null;
+    if (hasResourceData) {
+      tabs.add(
+        _InstanceTab(
+          index: tabs.length,
+          label: 'Resources',
+          icon: Icons.tune_rounded,
+          builder: (context, instance, status, busy, upload) =>
+              _buildResourceSection(status: status),
+        ),
+      );
+    }
+
+    final hasServices = status.services.isNotEmpty;
+    if (hasServices) {
+      tabs.add(
+        _InstanceTab(
+          index: tabs.length,
+          label: 'Services',
+          icon: Icons.miscellaneous_services_rounded,
+          builder: (context, instance, status, busy, upload) =>
+              _buildServicesSection(
+                instance: instance,
+                services: status.services,
+                busy: busy,
+              ),
+        ),
+      );
+    }
+
+    tabs.add(
+        _InstanceTab(
+          index: tabs.length,
+          label: 'Update',
+          icon: Icons.system_update_alt_rounded,
+          builder: (context, instance, status, busy, upload) =>
+            _buildUpdateSection(
+              instance: instance,
+              busy: busy,
+              progress: upload?.progress,
+              message: upload?.message,
+            ),
+      ),
+    );
+
+    return tabs;
+  }
+
+  Widget _detailTabBody({
+    required GokrazyInstance instance,
+    required GokrazyStatus status,
+    required int tabIndex,
+    required List<_InstanceTab> tabs,
+    required bool busy,
+    required _UploadState? upload,
+  }) {
+    if (tabIndex < 0 || tabIndex >= tabs.length) {
+      return const SizedBox.shrink();
+    }
+    final tab = tabs[tabIndex];
+    return Column(
+      key: ValueKey('${instance.id}-tab-${tab.index}'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Builder(
+          builder: (context) =>
+              tab.builder(context, instance, status, busy, upload),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOverviewSection({required GokrazyStatus status}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        OverviewCard(status: status),
+      ],
+    );
+  }
+
+  Widget _buildResourceSection({required GokrazyStatus status}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ResourceCard(status: status),
+      ],
+    );
+  }
+
+  Widget _buildServicesSection({
+    required GokrazyInstance instance,
+    required List<GokrazyService> services,
+    required bool busy,
+  }) {
+    final hasServices = services.isNotEmpty;
+    if (!hasServices) {
+      return const EmptyState(
+        title: 'No services',
+        message: 'This appliance has no supervised services.',
+        icon: Icons.miscellaneous_services_outlined,
+      );
+    }
+
+    return ServicesCard(
+      services: services,
+      busy: busy,
+      onStart: (svc) => _runServiceAction(
+        instance,
+        'Service started',
+        svc,
+        (client) => client.startService(svc.path),
+      ),
+      onStop: (svc) => _runServiceAction(
+        instance,
+        'Service stopped',
+        svc,
+        (client) => client.stopService(svc.path),
+      ),
+      onRestart: (svc) => _runServiceAction(
+        instance,
+        'Service restarted',
+        svc,
+        (client) => client.restartService(svc.path),
+      ),
+      onLogs: (svc) => _openServiceLogs(instance, svc),
+      onArgs: _showServiceArgs,
+    );
+  }
+
+  Widget _buildUpdateSection({
+    required GokrazyInstance instance,
+    required bool busy,
+    required double? progress,
+    required String? message,
+  }) {
+    return UpdateCard(
+      busy: busy,
+      progress: progress,
+      message: message,
+      onUpload: () => _uploadSquashfs(instance),
+      onTestboot: () => _runAction(
+        instance,
+        'Test boot marked',
+        (client) => client.testboot(),
+      ),
+      onSwitch: () => _runAction(
+        instance,
+        'Root switched',
+        (client) => client.switchRoot(),
+      ),
+      onReboot: () => _runAction(
+        instance,
+        'Reboot requested',
+        (client) => client.reboot(),
+      ),
+    );
+  }
+}
+
+class _InstanceTab {
+  const _InstanceTab({
+    required this.index,
+    required this.label,
+    required this.icon,
+    required this.builder,
+  });
+
+  final int index;
+  final String label;
+  final IconData icon;
+  final Widget Function(
+    BuildContext context,
+    GokrazyInstance instance,
+    GokrazyStatus status,
+    bool busy,
+    _UploadState? upload,
+  ) builder;
 }
 
 class _UploadState {

@@ -15,7 +15,6 @@ class InstanceStrip extends StatelessWidget {
     required this.selectedIds,
     required this.onLongPress,
     required this.onSelect,
-    required this.onAdd,
     super.key,
   });
 
@@ -27,19 +26,15 @@ class InstanceStrip extends StatelessWidget {
   final Set<String> selectedIds;
   final ValueChanged<String> onSelect;
   final ValueChanged<String> onLongPress;
-  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
-        itemCount: instances.length + 1,
+        itemCount: instances.length,
         separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s),
         itemBuilder: (context, index) {
-          if (index == instances.length) {
-            return _AddTile(key: const ValueKey('instance-add-tile'), onTap: onAdd);
-          }
           final instance = instances[index];
           final selected = selectedId == instance.id;
           final selectedForBatch = selectedIds.contains(instance.id);
@@ -201,124 +196,6 @@ class _InstanceTile extends StatelessWidget {
       ),
     );
   }
-}
-
-class _AddTile extends StatelessWidget {
-  const _AddTile({
-    super.key,
-    required this.onTap,
-  });
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return SizedBox(
-      width: 96,
-      child: DottedBorderBox(
-        color: scheme.primary.withValues(alpha: 0.5),
-        radius: AppRadius.lg,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            onTap: onTap,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: scheme.primary.withValues(
-                        alpha: dark ? 0.18 : 0.12,
-                      ),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Icon(
-                      Icons.add_rounded,
-                      color: scheme.primary,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Add',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: scheme.primary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Container with a subtle dashed border, used for the "Add" affordance.
-class DottedBorderBox extends StatelessWidget {
-  const DottedBorderBox({
-    required this.child,
-    this.color = Colors.grey,
-    this.radius = AppRadius.lg,
-    super.key,
-  });
-
-  final Widget child;
-  final Color color;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _DashedBorderPainter(color: color, radius: radius),
-      child: child,
-    );
-  }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-    final rrect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      Radius.circular(radius),
-    );
-    final path = Path()..addRRect(rrect);
-    final dashWidth = 5.0;
-    final dashGap = 4.0;
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final next = distance + dashWidth;
-        canvas.drawPath(
-          metric.extractPath(distance, next.clamp(0, metric.length)),
-          paint,
-        );
-        distance = next + dashGap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.radius != radius;
 }
 
 /// Vertical instance list used in tablet/desktop sidebar layout.
