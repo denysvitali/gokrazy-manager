@@ -53,6 +53,7 @@ jobs:
         with:
           channel: stable
           flutter-version: 3.41.6
+          cache: true
 
       - name: Cache pub dependencies
         uses: actions/cache@v5
@@ -81,6 +82,7 @@ jobs:
         with:
           channel: stable
           flutter-version: 3.41.6
+          cache: true
 
 
       - name: Cache pub dependencies
@@ -137,7 +139,7 @@ jobs:
           echo "Source files: $(grep -c '^SF:' coverage/lcov.info)"
 
       - name: Install curl
-        run: sudo apt-get update && sudo apt-get install -y curl
+        run: command -v curl >/dev/null || (sudo apt-get update && sudo apt-get install -y curl)
 
       - name: Upload coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
@@ -189,12 +191,6 @@ jobs:
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf /opt/microsoft/powershell
-          sudo rm -rf /usr/local/share/chromedriver-linux64
-          sudo rm -rf /usr/local/share/edge_driver
-          sudo rm -rf /usr/local/share/gecko_driver
-          sudo rm -rf /usr/share/swift
           df -h
 
       - name: Setup Java
@@ -208,9 +204,14 @@ jobs:
         with:
           channel: stable
           flutter-version: 3.41.6
+          cache: true
 
       - name: Setup Android NDK
         run: |
+          if [ -d "$ANDROID_HOME/ndk/28.2.13676358" ]; then
+            echo "NDK already available, skipping install."
+            exit 0
+          fi
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKMANAGER" --licenses || true
           "$SDKMANAGER" "ndk;28.2.13676358"
@@ -318,12 +319,6 @@ jobs:
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf /opt/microsoft/powershell
-          sudo rm -rf /usr/local/share/chromedriver-linux64
-          sudo rm -rf /usr/local/share/edge_driver
-          sudo rm -rf /usr/local/share/gecko_driver
-          sudo rm -rf /usr/share/swift
           df -h
 
       - name: Create keystore
@@ -475,10 +470,15 @@ jobs:
         with:
           channel: stable
           flutter-version: 3.41.6
+          cache: true
 
       - name: Setup Android NDK
         if: ${{ steps.check_keystore.outputs.ENABLED == 'true' }}
         run: |
+          if [ -d "$ANDROID_HOME/ndk/28.2.13676358" ]; then
+            echo "NDK already available, skipping install."
+            exit 0
+          fi
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKMANAGER" --licenses || true
           "$SDKMANAGER" "ndk;28.2.13676358"
@@ -541,7 +541,7 @@ jobs:
             --target-platform android-arm64 \
             --build-number ${{ steps.build_meta.outputs.BUILD_NUMBER }} \
             --dart-define=SENTRY_RELEASE=gokrazy_manager@0.1.0+${{ steps.build_meta.outputs.BUILD_NUMBER }} \
-            --verbose 2>&1 | tee build-release.log
+            2>&1 | tee build-release.log
 
       - name: Upload release build log
         if: ${{ steps.check_keystore.outputs.ENABLED == 'true' && always() }}
