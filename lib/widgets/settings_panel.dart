@@ -324,31 +324,6 @@ class _AboutCard extends StatelessWidget {
             icon: Icons.info_outline_rounded,
           ),
           const SizedBox(height: AppSpacing.xs),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: const [
-              StatusPill(
-                label: 'Material 3',
-                icon: Icons.palette_rounded,
-                tone: StatusTone.primary,
-                dense: true,
-              ),
-              StatusPill(
-                label: 'Open source',
-                icon: Icons.public_rounded,
-                tone: StatusTone.info,
-                dense: true,
-              ),
-              StatusPill(
-                label: 'Self-signed friendly',
-                icon: Icons.verified_user_rounded,
-                tone: StatusTone.success,
-                dense: true,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s + 2),
           Text(
             'A modern dashboard for the gokrazy supervised appliances. '
             'Manage services, flash root images, and stream live logs '
