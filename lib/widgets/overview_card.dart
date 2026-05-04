@@ -209,8 +209,6 @@ class _AddressRow extends StatelessWidget {
               address: entry.value,
               addressColor: addressColor,
               addressTypeLabel: addressTypeLabel,
-              onCopy: () =>
-                  _copyAddress(context, addressTypeLabel, entry.value),
             ),
             if (entry.key + 1 < addresses.length)
               const SizedBox(height: 5),
@@ -220,23 +218,6 @@ class _AddressRow extends StatelessWidget {
     );
   }
 
-  Future<void> _copyAddress(
-    BuildContext context,
-    String addressTypeLabel,
-    String address,
-  ) async {
-    await Clipboard.setData(ClipboardData(text: address));
-    if (!context.mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Copied $addressTypeLabel address to clipboard',
-        ),
-      ),
-    );
-  }
 }
 
 class _AddressCopyRow extends StatelessWidget {
@@ -244,63 +225,67 @@ class _AddressCopyRow extends StatelessWidget {
     required this.address,
     required this.addressColor,
     required this.addressTypeLabel,
-    required this.onCopy,
   });
 
   final String address;
   final Color addressColor;
   final String addressTypeLabel;
-  final VoidCallback onCopy;
+
+  Future<void> _copy(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: address));
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Copied $addressTypeLabel address to clipboard'),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Copy $addressTypeLabel address',
-      hint: 'Copies this address to the clipboard',
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: addressColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(
-                  color: addressColor.withValues(alpha: 0.22),
-                ),
+      label: 'Copy $addressTypeLabel address $address',
+      hint: 'Tap or long-press to copy to clipboard',
+      child: Material(
+        color: addressColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          onTap: () => _copy(context),
+          onLongPress: () => _copy(context),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(
+                color: addressColor.withValues(alpha: 0.22),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: SelectableText(
-                address,
-                style: TextStyle(
-                  color: addressColor,
-                  fontFamily: 'monospace',
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SelectableText(
+                    address,
+                    style: TextStyle(
+                      color: addressColor,
+                      fontFamily: 'monospace',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-              ),
+                Icon(
+                  Icons.content_copy_rounded,
+                  color: addressColor.withValues(alpha: 0.5),
+                  size: 14,
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 6),
-          TextButton.icon(
-            onPressed: onCopy,
-            icon: Icon(
-              Icons.content_copy_rounded,
-              color: addressColor,
-              size: 14,
-            ),
-            label: const Text('Copy'),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              visualDensity: VisualDensity.compact,
-              foregroundColor: addressColor,
-              textStyle: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 12.5,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

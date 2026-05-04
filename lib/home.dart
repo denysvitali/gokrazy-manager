@@ -44,6 +44,7 @@ class _HomeShellState extends State<HomeShell> {
   String _lastLocation = '';
 
   final Map<String, _UploadState> _uploadByInstance = {};
+  int _instanceTab = 0;
   int get _routeTab => widget.navigationShell.currentIndex;
 
   @override
@@ -116,6 +117,10 @@ class _HomeShellState extends State<HomeShell> {
         });
       }
       return;
+    }
+
+    if (_instanceTab != 0) {
+      setState(() => _instanceTab = 0);
     }
 
     if (_selectedId != null && !_instances.any((entry) => entry.id == _selectedId)) {
@@ -488,6 +493,10 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
+  void _switchInstanceTab(int index) {
+    setState(() => _instanceTab = index);
+  }
+
   void _navigateToRoute(String destination) {
     final current =
         GoRouter.of(context).routerDelegate.currentConfiguration.uri.toString();
@@ -780,20 +789,48 @@ class _HomeShellState extends State<HomeShell> {
       bottomNavigationBar: useRail
           ? null
           : NavigationBar(
-              selectedIndex: _routeTab,
-              onDestinationSelected: _switchTab,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard_rounded),
-                  label: 'Dashboard',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.tune_outlined),
-                  selectedIcon: Icon(Icons.tune_rounded),
-                  label: 'Settings',
-                ),
-              ],
+              selectedIndex:
+                  isInstanceDetailRoute ? _instanceTab : _routeTab,
+              onDestinationSelected: isInstanceDetailRoute
+                  ? _switchInstanceTab
+                  : _switchTab,
+              destinations: isInstanceDetailRoute
+                  ? const [
+                      NavigationDestination(
+                        icon: Icon(Icons.dashboard_outlined),
+                        selectedIcon: Icon(Icons.dashboard_rounded),
+                        label: 'Overview',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.tune_outlined),
+                        selectedIcon: Icon(Icons.tune_rounded),
+                        label: 'Resources',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.miscellaneous_services_outlined),
+                        selectedIcon:
+                            Icon(Icons.miscellaneous_services_rounded),
+                        label: 'Services',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.system_update_alt_outlined),
+                        selectedIcon:
+                            Icon(Icons.system_update_alt_rounded),
+                        label: 'Update',
+                      ),
+                    ]
+                  : const [
+                      NavigationDestination(
+                        icon: Icon(Icons.dashboard_outlined),
+                        selectedIcon: Icon(Icons.dashboard_rounded),
+                        label: 'Dashboard',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.tune_outlined),
+                        selectedIcon: Icon(Icons.tune_rounded),
+                        label: 'Settings',
+                      ),
+                    ],
             ),
     );
 
@@ -804,8 +841,11 @@ class _HomeShellState extends State<HomeShell> {
       children: [
         SafeArea(
           child: NavigationRail(
-            selectedIndex: _routeTab,
-            onDestinationSelected: _switchTab,
+            selectedIndex:
+                isInstanceDetailRoute ? _instanceTab : _routeTab,
+            onDestinationSelected: isInstanceDetailRoute
+                ? _switchInstanceTab
+                : _switchTab,
             labelType: NavigationRailLabelType.all,
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
@@ -814,18 +854,43 @@ class _HomeShellState extends State<HomeShell> {
                 size: 48,
               ),
             ),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard_rounded),
-                label: Text('Dashboard'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.tune_outlined),
-                selectedIcon: Icon(Icons.tune_rounded),
-                label: Text('Settings'),
-              ),
-            ],
+            destinations: isInstanceDetailRoute
+                ? const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.dashboard_outlined),
+                      selectedIcon: Icon(Icons.dashboard_rounded),
+                      label: Text('Overview'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.tune_outlined),
+                      selectedIcon: Icon(Icons.tune_rounded),
+                      label: Text('Resources'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.miscellaneous_services_outlined),
+                      selectedIcon:
+                          Icon(Icons.miscellaneous_services_rounded),
+                      label: Text('Services'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.system_update_alt_outlined),
+                      selectedIcon:
+                          Icon(Icons.system_update_alt_rounded),
+                      label: Text('Update'),
+                    ),
+                  ]
+                : const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.dashboard_outlined),
+                      selectedIcon: Icon(Icons.dashboard_rounded),
+                      label: Text('Dashboard'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.tune_outlined),
+                      selectedIcon: Icon(Icons.tune_rounded),
+                      label: Text('Settings'),
+                    ),
+                  ],
           ),
         ),
         const VerticalDivider(width: 1),
@@ -1062,22 +1127,11 @@ class _HomeShellState extends State<HomeShell> {
             ],
             if (status != null) ...[
               const SizedBox(height: AppSpacing.m),
-              _buildOverviewSection(status: status),
-              const SizedBox(height: AppSpacing.m),
-              _buildResourceSection(status: status),
-              const SizedBox(height: AppSpacing.m),
-              _buildServicesSection(
-                instance: instance,
-                services: status.services,
-                busy: busy,
-              ),
-              const SizedBox(height: AppSpacing.m),
-              _buildUpdateSection(
+              _buildInstanceTabContent(
                 instance: instance,
                 status: status,
                 busy: busy,
-                progress: upload?.progress,
-                message: upload?.message,
+                upload: upload,
               ),
             ],
           ],
@@ -1172,6 +1226,36 @@ class _HomeShellState extends State<HomeShell> {
         (client) => client.reboot(),
       ),
     );
+  }
+
+  Widget _buildInstanceTabContent({
+    required GokrazyInstance instance,
+    required GokrazyStatus status,
+    required bool busy,
+    _UploadState? upload,
+  }) {
+    switch (_instanceTab) {
+      case 0:
+        return _buildOverviewSection(status: status);
+      case 1:
+        return _buildResourceSection(status: status);
+      case 2:
+        return _buildServicesSection(
+          instance: instance,
+          services: status.services,
+          busy: busy,
+        );
+      case 3:
+        return _buildUpdateSection(
+          instance: instance,
+          status: status,
+          busy: busy,
+          progress: upload?.progress,
+          message: upload?.message,
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }
 

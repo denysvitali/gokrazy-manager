@@ -35,6 +35,12 @@ The app pins SSL certificates to trust self-signed gokrazy devices. When an untr
 
 go_router handles routing with three routes: `/` (dashboard), `/settings`, and `/instance/:instanceId`. The main navigation uses `NavigationBar` with adaptive breakpoint switching to `NavigationRail` at desktop widths.
 
+When viewing an instance detail (`/instance/:instanceId`), the bottom navigation bar and rail switch to instance-specific tabs: **Overview**, **Resources**, **Services**, and **Update**. Tapping a tab shows only that section instead of scrolling through all content. The back button returns to the dashboard. When leaving an instance view, the active tab resets to Overview.
+
+### Network Section
+
+IP addresses in the Overview card's network section are shown in tappable rows. A tap or long-press on any address copies it to the clipboard and shows a snackbar confirmation.
+
 ### Key Models
 
 - `GokrazyInstance`: id, name, baseUrl, username, pinnedFingerprint, lastSeen
