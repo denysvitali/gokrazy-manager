@@ -40,8 +40,6 @@ class _HomeShellState extends State<HomeShell> {
   final Set<String> _busyInstances = {};
   final Set<String> _selectedInstanceIds = {};
   String? _selectedId;
-  String? _detailTabInstanceId;
-  int _detailTabIndex = 0;
   bool _loading = true;
   String _lastLocation = '';
 
@@ -110,8 +108,6 @@ class _HomeShellState extends State<HomeShell> {
       if (resolved != _selectedId) {
         setState(() {
           _selectedId = resolved;
-          _detailTabInstanceId = resolved;
-          _detailTabIndex = 0;
         });
       }
       if (_selectedInstanceIds.isNotEmpty) {
@@ -125,15 +121,11 @@ class _HomeShellState extends State<HomeShell> {
     if (_selectedId != null && !_instances.any((entry) => entry.id == _selectedId)) {
       setState(() {
         _selectedId = _instances.isEmpty ? null : _instances.first.id;
-        _detailTabInstanceId = _selectedId;
-        _detailTabIndex = 0;
       });
     }
     if (_selectedId == null && _instances.isNotEmpty) {
       setState(() {
         _selectedId = _instances.first.id;
-        _detailTabInstanceId = _selectedId;
-        _detailTabIndex = 0;
       });
     }
   }
@@ -161,8 +153,6 @@ class _HomeShellState extends State<HomeShell> {
       _instances = instances;
       _selectedInstanceIds.clear();
       _selectedId = instances.isEmpty ? null : instances.first.id;
-      _detailTabInstanceId = _selectedId;
-      _detailTabIndex = 0;
       _loading = false;
     });
     unawaited(_refreshAll());
@@ -483,8 +473,6 @@ class _HomeShellState extends State<HomeShell> {
     }
     setState(() {
       _selectedId = id;
-      _detailTabInstanceId = id;
-      _detailTabIndex = 0;
     });
     _navigateToRoute('/instance/$id');
   }
@@ -758,14 +746,6 @@ class _HomeShellState extends State<HomeShell> {
         GoRouter.of(context).routerDelegate.currentConfiguration.uri;
     final isInstanceDetailRoute = location.pathSegments.length == 2 &&
         location.pathSegments.first == 'instance';
-    final detailTabs = isInstanceDetailRoute ? _tabsForCurrentInstance(selected) : null;
-    final activeDetailTabIndex = detailTabs == null || detailTabs.isEmpty
-        ? 0
-        : (_detailTabIndex < 0 || _detailTabIndex >= detailTabs.length
-            ? 0
-            : _detailTabIndex);
-
-    final showInstanceNav = isInstanceDetailRoute && detailTabs != null;
 
     final body = AnimatedSwitcher(
       duration: motionDuration(context, AppMotion.fast),
@@ -800,39 +780,20 @@ class _HomeShellState extends State<HomeShell> {
       bottomNavigationBar: useRail
           ? null
           : NavigationBar(
-              selectedIndex: showInstanceNav
-                  ? activeDetailTabIndex
-                  : _routeTab,
-              onDestinationSelected: (index) {
-                if (showInstanceNav && detailTabs != null) {
-                  if (index >= 0 && index < detailTabs.length) {
-                    setState(() => _detailTabIndex = index);
-                  }
-                  return;
-                }
-                _switchTab(index);
-              },
-              destinations: showInstanceNav
-                  ? [
-                      for (final tab in detailTabs ?? const <_InstanceTab>[])
-                        NavigationDestination(
-                          icon: Icon(tab.icon),
-                          selectedIcon: Icon(tab.icon),
-                          label: tab.label,
-                        ),
-                    ]
-                  : [
-                      NavigationDestination(
-                        icon: Icon(Icons.dashboard_outlined),
-                        selectedIcon: Icon(Icons.dashboard_rounded),
-                        label: 'Dashboard',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.tune_outlined),
-                        selectedIcon: Icon(Icons.tune_rounded),
-                        label: 'Settings',
-                      ),
-                    ],
+              selectedIndex: _routeTab,
+              onDestinationSelected: _switchTab,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.dashboard_outlined),
+                  selectedIcon: Icon(Icons.dashboard_rounded),
+                  label: 'Dashboard',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.tune_outlined),
+                  selectedIcon: Icon(Icons.tune_rounded),
+                  label: 'Settings',
+                ),
+              ],
             ),
     );
 
@@ -842,19 +803,9 @@ class _HomeShellState extends State<HomeShell> {
     return Row(
       children: [
         SafeArea(
-            child: NavigationRail(
-            selectedIndex: showInstanceNav
-                ? activeDetailTabIndex
-                : _routeTab,
-            onDestinationSelected: (index) {
-              if (showInstanceNav && detailTabs != null) {
-                if (index >= 0 && index < detailTabs.length) {
-                  setState(() => _detailTabIndex = index);
-                }
-                return;
-              }
-              _switchTab(index);
-            },
+          child: NavigationRail(
+            selectedIndex: _routeTab,
+            onDestinationSelected: _switchTab,
             labelType: NavigationRailLabelType.all,
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
@@ -863,27 +814,18 @@ class _HomeShellState extends State<HomeShell> {
                 size: 48,
               ),
             ),
-            destinations: showInstanceNav
-                ? [
-                    for (final tab in detailTabs ?? const <_InstanceTab>[])
-                      NavigationRailDestination(
-                        icon: Icon(tab.icon),
-                        selectedIcon: Icon(tab.icon),
-                        label: Text(tab.label),
-                      ),
-                  ]
-                : const [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.dashboard_outlined),
-                      selectedIcon: Icon(Icons.dashboard_rounded),
-                      label: Text('Dashboard'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.tune_outlined),
-                      selectedIcon: Icon(Icons.tune_rounded),
-                      label: Text('Settings'),
-                    ),
-                  ],
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.dashboard_outlined),
+                selectedIcon: Icon(Icons.dashboard_rounded),
+                label: Text('Dashboard'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.tune_outlined),
+                selectedIcon: Icon(Icons.tune_rounded),
+                label: Text('Settings'),
+              ),
+            ],
           ),
         ),
         const VerticalDivider(width: 1),
@@ -994,17 +936,6 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  List<_InstanceTab>? _tabsForCurrentInstance(GokrazyInstance? selected) {
-    if (selected == null) {
-      return null;
-    }
-    final status = _statuses[selected.id];
-    if (status == null) {
-      return null;
-    }
-    return _tabsForStatus(status);
-  }
-
   Widget _buildDashboard(BuildContext context, GokrazyInstance? selected, bool showDetail) {
     if (_instances.isEmpty) {
       return EmptyState(
@@ -1099,18 +1030,6 @@ class _HomeShellState extends State<HomeShell> {
     final loading = _statusLoading.contains(instance.id) && status == null;
     final busy = _busyInstances.contains(instance.id);
     final upload = _uploadByInstance[instance.id];
-    final tabs = status == null ? const <_InstanceTab>[] : _tabsForStatus(status);
-    final tabIndex = _detailTabInstanceId != instance.id ||
-            _detailTabIndex >= tabs.length
-        ? 0
-        : _detailTabIndex;
-    if (tabIndex != _detailTabIndex) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() => _detailTabIndex = tabIndex);
-        }
-      });
-    }
 
     return RefreshIndicator(
       onRefresh: () => _refresh(instance),
@@ -1153,46 +1072,25 @@ class _HomeShellState extends State<HomeShell> {
                 ),
               ),
             ],
-            const SizedBox(height: AppSpacing.m),
             if (status != null) ...[
-              if (tabs.isNotEmpty) ...[
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SegmentedButton<int>(
-                    segments: [
-                      for (final tab in tabs)
-                        ButtonSegment<int>(
-                          value: tab.index,
-                          label: Text(tab.label),
-                          icon: Icon(tab.icon),
-                        ),
-                    ],
-                    selected: <int>{tabs[tabIndex].index},
-                    onSelectionChanged: (selected) {
-                      final next = selected.first;
-                      setState(() => _detailTabIndex = next);
-                    },
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.m),
-              ],
-              AnimatedSwitcher(
-                duration: motionDuration(context, AppMotion.fast),
-                child: _detailTabBody(
-                  instance: instance,
-                  status: status,
-                    tabIndex: tabIndex,
-                    tabs: tabs,
-                    busy: busy,
-                    upload: upload,
-                  ),
-                ),
-              ] else
-                const EmptyState(
-                  title: 'No detail sections',
-                  message: 'This appliance returned no actionable status fields.',
-                  icon: Icons.remove_red_eye_outlined,
-                ),
+              const SizedBox(height: AppSpacing.m),
+              _buildOverviewSection(status: status),
+              const SizedBox(height: AppSpacing.m),
+              _buildResourceSection(status: status),
+              const SizedBox(height: AppSpacing.m),
+              _buildServicesSection(
+                instance: instance,
+                services: status.services,
+                busy: busy,
+              ),
+              const SizedBox(height: AppSpacing.m),
+              _buildUpdateSection(
+                instance: instance,
+                status: status,
+                busy: busy,
+                progress: upload?.progress,
+                message: upload?.message,
+              ),
             ],
           ],
         ),
@@ -1200,84 +1098,7 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  List<_InstanceTab> _tabsForStatus(GokrazyStatus status) {
-    final tabs = <_InstanceTab>[
-      _InstanceTab(
-        index: 0,
-        label: 'Overview',
-        icon: Icons.dashboard_customize_rounded,
-        builder: (context, instance, status, busy, upload) =>
-            _buildOverviewSection(
-              status: status,
-            ),
-      ),
-    ];
-
-    final hasResourceData = status.memTotal != null ||
-        status.memAvailable != null ||
-        status.permTotal != null ||
-        status.permUsed != null;
-    if (hasResourceData) {
-      tabs.add(
-        _InstanceTab(
-          index: tabs.length,
-          label: 'Resources',
-          icon: Icons.tune_rounded,
-          builder: (context, instance, status, busy, upload) =>
-              _buildResourceSection(status: status),
-        ),
-      );
-    }
-
-    final hasServices = status.services.isNotEmpty;
-    if (hasServices) {
-      tabs.add(
-        _InstanceTab(
-          index: tabs.length,
-          label: 'Services',
-          icon: Icons.miscellaneous_services_rounded,
-          builder: (context, instance, status, busy, upload) =>
-              _buildServicesSection(
-                instance: instance,
-                services: status.services,
-                busy: busy,
-              ),
-        ),
-      );
-    }
-
-    tabs.add(
-        _InstanceTab(
-          index: tabs.length,
-          label: 'Update',
-          icon: Icons.system_update_alt_rounded,
-          builder: (context, instance, status, busy, upload) =>
-            _buildUpdateSection(
-              instance: instance,
-              busy: busy,
-              progress: upload?.progress,
-              message: upload?.message,
-            ),
-      ),
-    );
-
-    return tabs;
-  }
-
-  Widget _detailTabBody({
-    required GokrazyInstance instance,
-    required GokrazyStatus status,
-    required int tabIndex,
-    required List<_InstanceTab> tabs,
-    required bool busy,
-    required _UploadState? upload,
-  }) {
-    if (tabIndex < 0 || tabIndex >= tabs.length) {
-      return const SizedBox.shrink();
-    }
-    final tab = tabs[tabIndex];
-    return Column(
-      key: ValueKey('${instance.id}-tab-${tab.index}'),
+  Widget _buildOverviewSection({required GokrazyStatus status}) {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Builder(
@@ -1347,11 +1168,13 @@ class _HomeShellState extends State<HomeShell> {
 
   Widget _buildUpdateSection({
     required GokrazyInstance instance,
+    required GokrazyStatus status,
     required bool busy,
     required double? progress,
     required String? message,
   }) {
     return UpdateCard(
+      status: status,
       busy: busy,
       progress: progress,
       message: message,
@@ -1373,26 +1196,6 @@ class _HomeShellState extends State<HomeShell> {
       ),
     );
   }
-}
-
-class _InstanceTab {
-  const _InstanceTab({
-    required this.index,
-    required this.label,
-    required this.icon,
-    required this.builder,
-  });
-
-  final int index;
-  final String label;
-  final IconData icon;
-  final Widget Function(
-    BuildContext context,
-    GokrazyInstance instance,
-    GokrazyStatus status,
-    bool busy,
-    _UploadState? upload,
-  ) builder;
 }
 
 class _UploadState {

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../models.dart';
 import '../theme.dart';
 import 'common.dart';
 
 class UpdateCard extends StatelessWidget {
   const UpdateCard({
+    required this.status,
     required this.busy,
     required this.progress,
     required this.message,
@@ -15,6 +17,7 @@ class UpdateCard extends StatelessWidget {
     super.key,
   });
 
+  final GokrazyStatus? status;
   final bool busy;
   final double? progress;
   final String? message;
@@ -146,6 +149,13 @@ class UpdateCard extends StatelessWidget {
               ),
             ],
           ),
+          if (status != null && status!.bootPart != null) ...[
+            const SizedBox(height: AppSpacing.m),
+            _PartitionIndicator(
+              bootPart: status!.bootPart,
+              upgradePart: status!.upgradePart,
+            ),
+          ],
         ],
       ),
     );
@@ -241,6 +251,174 @@ class _ActionButtonTile extends StatelessWidget {
       tone: tone,
       dense: true,
       onTap: onTap,
+    );
+  }
+}
+
+class _PartitionIndicator extends StatelessWidget {
+  const _PartitionIndicator({
+    required this.bootPart,
+    required this.upgradePart,
+  });
+
+  final String? bootPart;
+  final String? upgradePart;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final otherPart = (bootPart == 'A' || bootPart == 'a') ? 'B' : 'A';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: dark
+            ? Colors.white.withValues(alpha: 0.04)
+            : Colors.black.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: dark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.05),
+        ),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.s + 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.storage_rounded,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Partition Status',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Expanded(
+                child: _PartitionChip(
+                  label: 'Booted',
+                  part: bootPart ?? '?',
+                  isActive: true,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s),
+              Icon(
+                Icons.arrow_forward_rounded,
+                size: 18,
+                color: theme.colorScheme.primary.withValues(alpha: 0.5),
+              ),
+              const SizedBox(width: AppSpacing.s),
+              Expanded(
+                child: _PartitionChip(
+                  label: 'Inactive',
+                  part: otherPart,
+                  isActive: false,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Press Switch to boot partition $otherPart',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: dark
+                  ? Colors.white.withValues(alpha: 0.5)
+                  : Colors.black.withValues(alpha: 0.5),
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PartitionChip extends StatelessWidget {
+  const _PartitionChip({
+    required this.label,
+    required this.part,
+    required this.isActive,
+  });
+
+  final String label;
+  final String part;
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    final bgColor = isActive
+        ? scheme.primary.withValues(alpha: 0.15)
+        : theme.brightness == Brightness.dark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.black.withValues(alpha: 0.05);
+    final borderColor = isActive
+        ? scheme.primary.withValues(alpha: 0.4)
+        : theme.brightness == Brightness.dark
+            ? Colors.white.withValues(alpha: 0.1)
+            : Colors.black.withValues(alpha: 0.1);
+    final textColor = isActive ? scheme.primary : scheme.onSurfaceVariant;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: borderColor),
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s,
+        vertical: AppSpacing.xs + 2,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: textColor.withValues(alpha: 0.8),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: isActive
+                  ? scheme.primary
+                  : theme.brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              part,
+              style: TextStyle(
+                color: isActive
+                    ? Colors.white
+                    : theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

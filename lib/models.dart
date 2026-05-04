@@ -73,6 +73,8 @@ class GokrazyStatus {
     this.publicAddrs = const [],
     this.memTotal,
     this.memAvailable,
+    this.bootPart,
+    this.upgradePart,
   });
 
   final List<GokrazyService> services;
@@ -88,6 +90,8 @@ class GokrazyStatus {
   final List<String> publicAddrs;
   final int? memTotal;
   final int? memAvailable;
+  final String? bootPart;
+  final String? upgradePart;
 
   int get runningServices => services.where((svc) => svc.running).length;
   int get totalServices => services.length;
@@ -110,6 +114,8 @@ class GokrazyStatus {
       publicAddrs: _asList(json['PublicAddrs']).map((e) => '$e').toList(),
       memTotal: _asInt(meminfo['MemTotal']),
       memAvailable: _asInt(meminfo['MemAvailable']),
+      bootPart: json['BootPart'] as String?,
+      upgradePart: json['UpgradePart'] as String?,
     );
   }
 }
