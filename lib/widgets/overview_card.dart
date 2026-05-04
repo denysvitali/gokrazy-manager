@@ -183,6 +183,11 @@ class _AddressRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final addressColor = tone == StatusTone.warning
+        ? Colors.amber
+        : scheme.primary;
     return Wrap(
       spacing: 6,
       runSpacing: 6,
@@ -202,12 +207,31 @@ class _AddressRow extends StatelessWidget {
           ),
         ),
         ...addresses.map(
-          (addr) => StatusPill(
-            label: addr,
-            tone: tone,
-            dense: true,
-            icon: Icons.copy_rounded,
+          (addr) => InkWell(
             onTap: () => _copyAddress(context, addr),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.copy_rounded,
+                    size: 13,
+                    color: addressColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    addr,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: addressColor,
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],
