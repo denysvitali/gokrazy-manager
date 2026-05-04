@@ -12,7 +12,6 @@ class ServicesCard extends StatelessWidget {
     required this.onStop,
     required this.onRestart,
     required this.onLogs,
-    required this.onArgs,
     super.key,
   });
 
@@ -22,7 +21,6 @@ class ServicesCard extends StatelessWidget {
   final ValueChanged<GokrazyService> onStop;
   final ValueChanged<GokrazyService> onRestart;
   final ValueChanged<GokrazyService> onLogs;
-  final ValueChanged<GokrazyService> onArgs;
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +82,6 @@ class ServicesCard extends StatelessWidget {
                     onStop: () => onStop(svc),
                     onRestart: () => onRestart(svc),
                     onLogs: () => onLogs(svc),
-                    onArgs: svc.args.isEmpty ? null : () => onArgs(svc),
                   );
                   return index == services.length - 1
                       ? row
@@ -141,7 +138,6 @@ class _ServiceTile extends StatelessWidget {
     required this.onStop,
     required this.onRestart,
     required this.onLogs,
-    required this.onArgs,
   });
 
   final GokrazyService service;
@@ -150,7 +146,6 @@ class _ServiceTile extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback onRestart;
   final VoidCallback onLogs;
-  final VoidCallback? onArgs;
 
   @override
   Widget build(BuildContext context) {
@@ -240,18 +235,6 @@ class _ServiceTile extends StatelessWidget {
                   ],
                 ),
               ),
-                if (onArgs != null)
-                Semantics(
-                  button: true,
-                  label: 'Service arguments',
-                  hint: 'Open environment and process args for ${service.name}',
-                  child: IconButton(
-                    tooltip: 'Args (${service.args.length})',
-                    onPressed: onArgs,
-                    icon: const Icon(Icons.tune_rounded, size: 18),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: AppSpacing.s),

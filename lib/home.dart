@@ -580,98 +580,6 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
-  Future<void> _showServiceArgs(GokrazyService service) async {
-    if (!mounted) {
-      return;
-    }
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.l,
-            AppSpacing.s,
-            AppSpacing.l,
-            AppSpacing.l,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const GradientIconBadge(
-                    icon: Icons.tune_rounded,
-                    size: 44,
-                  ),
-                  const SizedBox(width: AppSpacing.s),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          service.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.4,
-                              ),
-                        ),
-                        Text(
-                          'Process arguments',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.s),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 420),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: service.args.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
-                  itemBuilder: (context, index) {
-                    final arg = service.args[index];
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white.withValues(alpha: 0.04)
-                            : Colors.black.withValues(alpha: 0.03),
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.s,
-                        vertical: AppSpacing.xs,
-                      ),
-                      child: SelectableText(
-                        arg,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(fontFamily: 'monospace'),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _openServiceLogs(
     GokrazyInstance instance,
     GokrazyService service,
@@ -1435,7 +1343,6 @@ class _HomeShellState extends State<HomeShell> {
         (client) => client.restartService(svc.path),
       ),
       onLogs: (svc) => _openServiceLogs(instance, svc),
-      onArgs: _showServiceArgs,
     );
   }
 
