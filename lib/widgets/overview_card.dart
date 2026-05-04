@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models.dart';
 import '../theme.dart';
@@ -205,12 +206,23 @@ class _AddressRow extends StatelessWidget {
             label: addr,
             tone: tone,
             dense: true,
-            icon: tone == StatusTone.warning
-                ? Icons.public_rounded
-                : Icons.lan_rounded,
+            icon: Icons.copy_rounded,
+            onTap: () => _copyAddress(context, addr),
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _copyAddress(BuildContext context, String address) async {
+    await Clipboard.setData(ClipboardData(text: address));
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Address copied to clipboard'),
+      ),
     );
   }
 }
