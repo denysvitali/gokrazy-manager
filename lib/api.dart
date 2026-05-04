@@ -140,6 +140,7 @@ class GokrazyClient {
       final request = await client.getUrl(
         _uri('log').replace(queryParameters: {'path': path, 'stream': stream}),
       );
+      _setHeaders(request, keepJsonAccept: false);
       request.headers.set(HttpHeaders.acceptHeader, 'text/event-stream');
       final response = await request.close();
       final body =
