@@ -1099,17 +1099,6 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Widget _buildOverviewSection({required GokrazyStatus status}) {
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Builder(
-          builder: (context) =>
-              tab.builder(context, instance, status, busy, upload),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOverviewSection({required GokrazyStatus status}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
