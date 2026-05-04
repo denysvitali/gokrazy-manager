@@ -26,42 +26,50 @@ class OverviewCard extends StatelessWidget {
             icon: Icons.dashboard_customize_rounded,
           ),
           const SizedBox(height: AppSpacing.xs),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: _columnsFor(MediaQuery.sizeOf(context).width),
-            childAspectRatio: 3.4,
-            crossAxisSpacing: AppSpacing.s,
-            mainAxisSpacing: AppSpacing.s,
-            children: [
-              InfoTile(
-                icon: Icons.developer_board_rounded,
-                label: 'MODEL',
-                value: status.model ?? 'Unknown',
-              ),
-              InfoTile(
-                icon: Icons.terminal_rounded,
-                label: 'KERNEL',
-                value: status.kernel ?? 'Unknown',
-              ),
-              InfoTile(
-                icon: Icons.dns_rounded,
-                label: 'HOSTNAME',
-                value: status.hostname ?? 'Unknown',
-              ),
-              if (status.buildTimestamp != null)
-                InfoTile(
-                  icon: Icons.schedule_rounded,
-                  label: 'BUILD',
-                  value: status.buildTimestamp!,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = _columnsFor(constraints.maxWidth);
+              return GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: columns,
+                childAspectRatio: _tileAspectRatio(
+                  constraints.maxWidth,
+                  columns: columns,
                 ),
-              if (status.sbomHash != null)
-                InfoTile(
-                  icon: Icons.fingerprint_rounded,
-                  label: 'SBOM',
-                  value: status.sbomHash!,
-                ),
-            ],
+                crossAxisSpacing: AppSpacing.s,
+                mainAxisSpacing: AppSpacing.s,
+                children: [
+                  InfoTile(
+                    icon: Icons.developer_board_rounded,
+                    label: 'MODEL',
+                    value: status.model ?? 'Unknown',
+                  ),
+                  InfoTile(
+                    icon: Icons.terminal_rounded,
+                    label: 'KERNEL',
+                    value: status.kernel ?? 'Unknown',
+                  ),
+                  InfoTile(
+                    icon: Icons.dns_rounded,
+                    label: 'HOSTNAME',
+                    value: status.hostname ?? 'Unknown',
+                  ),
+                  if (status.buildTimestamp != null)
+                    InfoTile(
+                      icon: Icons.schedule_rounded,
+                      label: 'BUILD',
+                      value: status.buildTimestamp!,
+                    ),
+                  if (status.sbomHash != null)
+                    InfoTile(
+                      icon: Icons.fingerprint_rounded,
+                      label: 'SBOM',
+                      value: status.sbomHash!,
+                    ),
+                ],
+              );
+            },
           ),
           if (status.privateAddrs.isNotEmpty ||
               status.publicAddrs.isNotEmpty) ...[
@@ -132,6 +140,17 @@ class OverviewCard extends StatelessWidget {
       return 2;
     }
     return 2;
+  }
+
+  double _tileAspectRatio(double containerWidth, {required int columns}) {
+    if (columns <= 0) {
+      return 3.4;
+    }
+    final usableWidth = containerWidth - AppSpacing.s * (columns - 1);
+    final tileWidth = usableWidth / columns;
+    const minTileHeight = 92.0;
+    final ratio = tileWidth / minTileHeight;
+    return ratio.isFinite && ratio > 0 ? ratio : 3.4;
   }
 }
 
