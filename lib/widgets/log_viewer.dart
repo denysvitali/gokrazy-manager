@@ -225,6 +225,7 @@ class _LogViewerState extends State<LogViewer> {
               ],
               Expanded(
                 child: Container(
+                  width: double.infinity,
                   decoration: BoxDecoration(
                     color: dark
                         ? const Color(0xFF050816)
