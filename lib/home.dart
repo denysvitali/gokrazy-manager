@@ -1108,15 +1108,7 @@ class _HomeShellState extends State<HomeShell> {
             AppSpacing.xxl,
           ),
           children: [
-            HeroHeaderCard(
-              instance: instance,
-              status: status,
-              hasError: error != null,
-              onEdit: () => _openEditor(instance),
-              onDelete: () => _deleteInstance(instance),
-            ),
             if (error != null) ...[
-              const SizedBox(height: AppSpacing.m),
               Semantics(
                 liveRegion: true,
                 child: ErrorBanner(
@@ -1124,14 +1116,15 @@ class _HomeShellState extends State<HomeShell> {
                   onRetry: () => _refresh(instance),
                 ),
               ),
+              const SizedBox(height: AppSpacing.m),
             ],
             if (status != null) ...[
-              const SizedBox(height: AppSpacing.m),
               _buildInstanceTabContent(
                 instance: instance,
                 status: status,
                 busy: busy,
                 upload: upload,
+                hasError: error != null,
               ),
             ],
           ],
@@ -1140,10 +1133,22 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  Widget _buildOverviewSection({required GokrazyStatus status}) {
+  Widget _buildOverviewTab({
+    required GokrazyInstance instance,
+    required GokrazyStatus status,
+    required bool hasError,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        HeroHeaderCard(
+          instance: instance,
+          status: status,
+          hasError: hasError,
+          onEdit: () => _openEditor(instance),
+          onDelete: () => _deleteInstance(instance),
+        ),
+        const SizedBox(height: AppSpacing.m),
         OverviewCard(status: status),
       ],
     );
@@ -1232,11 +1237,16 @@ class _HomeShellState extends State<HomeShell> {
     required GokrazyInstance instance,
     required GokrazyStatus status,
     required bool busy,
+    required bool hasError,
     _UploadState? upload,
   }) {
     switch (_instanceTab) {
       case 0:
-        return _buildOverviewSection(status: status);
+        return _buildOverviewTab(
+          instance: instance,
+          status: status,
+          hasError: hasError,
+        );
       case 1:
         return _buildResourceSection(status: status);
       case 2:
