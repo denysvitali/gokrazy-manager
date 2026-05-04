@@ -149,7 +149,8 @@ class UpdateCard extends StatelessWidget {
               ),
             ],
           ),
-          if (status != null && status!.bootPart != null) ...[
+          if (status != null &&
+              (status!.bootPart != null || status!.upgradePart != null)) ...[
             const SizedBox(height: AppSpacing.m),
             _PartitionIndicator(
               bootPart: status!.bootPart,
@@ -268,7 +269,8 @@ class _PartitionIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    final otherPart = (bootPart == 'A' || bootPart == 'a') ? 'B' : 'A';
+    // Use upgradePart from API to determine inactive partition
+    final inactivePart = upgradePart?.toUpperCase();
 
     return Container(
       decoration: BoxDecoration(
@@ -322,23 +324,25 @@ class _PartitionIndicator extends StatelessWidget {
               const SizedBox(width: AppSpacing.s),
               Expanded(
                 child: _PartitionChip(
-                  label: 'Inactive',
-                  part: otherPart,
+                  label: 'Upgrade Target',
+                  part: inactivePart ?? '?',
                   isActive: false,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Press Switch to boot partition $otherPart',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: dark
-                  ? Colors.white.withValues(alpha: 0.5)
-                  : Colors.black.withValues(alpha: 0.5),
-              fontSize: 11,
+          if (inactivePart != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Press Switch to boot partition $inactivePart',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: dark
+                    ? Colors.white.withValues(alpha: 0.5)
+                    : Colors.black.withValues(alpha: 0.5),
+                fontSize: 11,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
