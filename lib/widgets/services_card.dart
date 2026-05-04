@@ -187,11 +187,16 @@ class _ServiceTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              HueAvatar(
-                seed: service.path,
-                label: service.name,
-                size: 44,
-                statusTone: tone,
+              Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: PulseDot(
+                    tone: tone,
+                    size: 6,
+                  ),
+                ),
               ),
               const SizedBox(width: AppSpacing.s),
               Expanded(
