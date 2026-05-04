@@ -140,6 +140,7 @@ class _ServiceTile extends StatelessWidget {
     required this.onStop,
     required this.onRestart,
     required this.onLogs,
+    required this.showCommandAction,
   });
 
   final GokrazyService service;
