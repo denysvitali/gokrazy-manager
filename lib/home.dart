@@ -668,12 +668,15 @@ class _HomeShellState extends State<HomeShell> {
             return;
           }
           final ratio = sent / total;
-          final progress = ratio.clamp(0.0, 1.0);
+          final finalize = ratio >= 1.0;
+          final progress = finalize ? 0.99 : ratio.clamp(0.0, 0.99);
           setState(() {
             _uploadByInstance[instance.id] = _UploadState(
               progress: progress.toDouble(),
               message:
-                  'Uploading ${file.name}${isGzipped ? ' (decompressing)' : ''}',
+                  finalize
+                      ? 'Upload stream complete, verifying checksum'
+                      : 'Uploading ${file.name}${isGzipped ? ' (decompressing)' : ''}',
             );
           });
         },

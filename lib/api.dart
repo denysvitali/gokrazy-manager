@@ -203,6 +203,9 @@ class GokrazyClient {
         if (loggedPreview) {
           return;
         }
+        if (inputBytes.length < 6 && uploadedBytes.length < 6) {
+          return;
+        }
         loggedPreview = true;
         final isGzip = inputBytes.length >= 2 &&
             inputBytes[0] == 0x1F &&
@@ -222,6 +225,9 @@ class GokrazyClient {
           onProgress(sent, size);
           if (inputBytes.length < 6) {
             inputBytes.addAll(chunk.take(6 - inputBytes.length));
+            if (inputBytes.length >= 6) {
+              logPreview();
+            }
           }
           sink.add(chunk);
         },
@@ -231,9 +237,7 @@ class GokrazyClient {
           if (uploadedBytes.length < 6) {
             uploadedBytes.addAll(chunk.take(6 - uploadedBytes.length));
           }
-          if (uploadedBytes.length >= 6) {
-            logPreview();
-          }
+          logPreview();
           sink.add(chunk);
         },
       );
