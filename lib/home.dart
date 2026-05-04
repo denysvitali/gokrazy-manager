@@ -944,43 +944,53 @@ class _HomeShellState extends State<HomeShell> {
                   onPressed: () => _navigateToRoute('/'),
                   icon: const Icon(Icons.arrow_back_rounded),
                 )
-          : null,
+              : null,
       actions: [
         if (isSelectionMode && selectedForEdit != null)
-          Semantics(
-            button: true,
-            label: 'Edit selected appliance',
-            hint: 'Open edit sheet for selected appliance',
-            child: IconButton(
-              tooltip: 'Edit selected',
-              onPressed: () => _openEditor(selectedForEdit),
-              icon: const Icon(Icons.edit_rounded),
-            ),
+          _appBarAction(
+            icon: Icons.edit_rounded,
+            label: 'Edit',
+            onPressed: () => _openEditor(selectedForEdit),
           ),
         if (isSelectionMode)
-          Semantics(
-            button: true,
-            label: 'Delete selected appliances',
-            hint: 'Delete all selected appliances',
-            child: IconButton(
-              tooltip: 'Delete selected',
-              onPressed: _deleteSelectedInstances,
-              icon: const Icon(Icons.delete_sweep_rounded),
-            ),
+          _appBarAction(
+            icon: Icons.delete_sweep_rounded,
+            label: selectedCount > 1
+                ? 'Delete ($selectedCount)'
+                : 'Delete',
+            onPressed: _deleteSelectedInstances,
           ),
-        if (_routeTab == 0 && _instances.isNotEmpty && !isInstanceDetailRoute)
-          Semantics(
-            button: true,
-            label: 'Refresh selected appliance',
-            hint: 'Fetch latest status for the selected appliance',
-            child: IconButton(
-              tooltip: 'Refresh selected',
-              onPressed: selected == null ? null : () => _refresh(selected),
-              icon: const Icon(Icons.refresh_rounded),
-            ),
+        if (_routeTab == 0 && _instances.isNotEmpty)
+          _appBarAction(
+            icon: Icons.refresh_rounded,
+            label: 'Refresh',
+            onPressed: selected == null ? null : () => _refresh(selected),
           ),
         const SizedBox(width: AppSpacing.xs),
       ],
+    );
+  }
+
+  Widget _appBarAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onPressed,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: TextButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 17),
+        label: Text(label),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          visualDensity: VisualDensity.compact,
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
+          ),
+        ),
+      ),
     );
   }
 
@@ -1130,15 +1140,14 @@ class _HomeShellState extends State<HomeShell> {
               instance: instance,
               status: status,
               hasError: error != null,
-              onRefresh: () => _refresh(instance),
               onEdit: () => _openEditor(instance),
               onDelete: () => _deleteInstance(instance),
             ),
-          if (error != null) ...[
-            const SizedBox(height: AppSpacing.m),
-            Semantics(
-              liveRegion: true,
-              child: ErrorBanner(
+            if (error != null) ...[
+              const SizedBox(height: AppSpacing.m),
+              Semantics(
+                liveRegion: true,
+                child: ErrorBanner(
                   message: error,
                   onRetry: () => _refresh(instance),
                 ),
@@ -1166,11 +1175,12 @@ class _HomeShellState extends State<HomeShell> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.m),
-                AnimatedSwitcher(
-                  duration: motionDuration(context, AppMotion.fast),
-                    child: _detailTabBody(
-                    instance: instance,
-                    status: status,
+              ],
+              AnimatedSwitcher(
+                duration: motionDuration(context, AppMotion.fast),
+                child: _detailTabBody(
+                  instance: instance,
+                  status: status,
                     tabIndex: tabIndex,
                     tabs: tabs,
                     busy: busy,
@@ -1315,19 +1325,19 @@ class _HomeShellState extends State<HomeShell> {
       busy: busy,
       onStart: (svc) => _runServiceAction(
         instance,
-        'Service started',
+        '${svc.name} start requested',
         svc,
         (client) => client.startService(svc.path),
       ),
       onStop: (svc) => _runServiceAction(
         instance,
-        'Service stopped',
+        '${svc.name} stop requested',
         svc,
         (client) => client.stopService(svc.path),
       ),
       onRestart: (svc) => _runServiceAction(
         instance,
-        'Service restarted',
+        '${svc.name} restart requested',
         svc,
         (client) => client.restartService(svc.path),
       ),

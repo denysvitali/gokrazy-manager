@@ -74,6 +74,7 @@ class ServicesCard extends StatelessWidget {
                 services.length,
                 (index) {
                   final svc = services[index];
+                  final hasCompactCommandAction = !svc.running || svc.pid == null;
                   final row = _ServiceTile(
                     key: ValueKey('${svc.path}-$index'),
                     service: svc,
@@ -82,6 +83,7 @@ class ServicesCard extends StatelessWidget {
                     onStop: () => onStop(svc),
                     onRestart: () => onRestart(svc),
                     onLogs: () => onLogs(svc),
+                    showCommandAction: hasCompactCommandAction,
                   );
                   return index == services.length - 1
                       ? row
@@ -146,6 +148,7 @@ class _ServiceTile extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback onRestart;
   final VoidCallback onLogs;
+  final bool showCommandAction;
 
   @override
   Widget build(BuildContext context) {
@@ -154,10 +157,18 @@ class _ServiceTile extends StatelessWidget {
     final dark = theme.brightness == Brightness.dark;
     final running = service.running;
     final tone = running ? StatusTone.success : StatusTone.error;
+    final pidLabel = service.pid == null
+        ? 'Stopped'
+        : 'PID ${service.pid}';
+    final sinceLabel = service.startTime == null ? null : 'since ${service.startTime}';
+    final pathColor = dark
+        ? Colors.white.withValues(alpha: 0.4)
+        : Colors.black.withValues(alpha: 0.4);
+    final subtitleColor = dark
+        ? Colors.white.withValues(alpha: 0.64)
+        : Colors.black.withValues(alpha: 0.52);
 
-    final subtitle = running
-        ? 'PID ${service.pid ?? '–'} • since ${service.startTime ?? 'unknown'}'
-        : 'Stopped';
+    final subtitle = running ? pidLabel : 'Stopped';
 
     return Container(
       decoration: BoxDecoration(
@@ -185,15 +196,15 @@ class _ServiceTile extends StatelessWidget {
               Align(
                 alignment: Alignment.topCenter,
                 child: SizedBox(
-                  width: 18,
-                  height: 18,
+                  width: 12,
+                  height: 12,
                   child: PulseDot(
                     tone: tone,
-                    size: 6,
+                    size: 3,
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.s),
+              const SizedBox(width: AppSpacing.xs),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,20 +225,30 @@ class _ServiceTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
                             color: dark
-                                ? Colors.white.withValues(alpha: 0.6)
-                                : Colors.black.withValues(alpha: 0.55),
+                            ? Colors.white.withValues(alpha: 0.6)
+                            : Colors.black.withValues(alpha: 0.55),
                             fontWeight: FontWeight.w600,
                           ),
                     ),
-                    const SizedBox(height: 2),
+                    if (sinceLabel != null) ...[
+                      const SizedBox(height: 1),
+                      Text(
+                        sinceLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: subtitleColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 1),
                     Text(
                       service.path,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall?.copyWith(
-                            color: dark
-                                ? Colors.white.withValues(alpha: 0.4)
-                                : Colors.black.withValues(alpha: 0.4),
+                            color: pathColor,
                             letterSpacing: 0.2,
                             fontFamily: 'monospace',
                           ),
@@ -237,10 +258,10 @@ class _ServiceTile extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.s),
+          const SizedBox(height: AppSpacing.xs),
           Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
+            spacing: AppSpacing.xxs,
+            runSpacing: 6,
             children: [
               _ServiceAction(
                 icon: running ? Icons.stop_rounded : Icons.play_arrow_rounded,
@@ -251,16 +272,17 @@ class _ServiceTile extends StatelessWidget {
               _ServiceAction(
                 icon: Icons.refresh_rounded,
                 label: 'Restart',
-                tone: StatusTone.warning,
-                onTap: busy ? null : onRestart,
+                tone: running ? StatusTone.warning : StatusTone.neutral,
+                onTap: busy || !running ? null : onRestart,
               ),
-              _ServiceAction(
-                icon: Icons.terminal_rounded,
-                label: 'Logs',
-                tone: StatusTone.primary,
-                onTap: onLogs,
-                primaryColor: scheme.primary,
-              ),
+              if (showCommandAction)
+                _ServiceAction(
+                  icon: Icons.terminal_rounded,
+                  label: 'Logs',
+                  tone: StatusTone.primary,
+                  onTap: onLogs,
+                  primaryColor: scheme.primary,
+                ),
             ],
           ),
         ],
@@ -318,20 +340,20 @@ class _ServiceAction extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.s + 2,
-              vertical: 8,
+              horizontal: AppSpacing.xs + 2,
+              vertical: 6,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: base, size: 16),
-                const SizedBox(width: 6),
+                Icon(icon, color: base, size: 14),
+                const SizedBox(width: 4),
                 Text(
                   label,
                   style: TextStyle(
                     color: base,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11.5,
                     letterSpacing: 0.2,
                   ),
                 ),

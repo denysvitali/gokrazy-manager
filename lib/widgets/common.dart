@@ -65,48 +65,61 @@ class StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final colors = _toneColors(scheme, dark, tone);
+    final showIcon = icon != null && !dense;
 
     final padding = dense
         ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4)
-        : const EdgeInsets.symmetric(horizontal: 12, vertical: 6);
+        : const EdgeInsets.symmetric(horizontal: 10, vertical: 6);
 
-    final content = Container(
-      decoration: BoxDecoration(
-        color: colors.background,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: colors.border),
-      ),
-      padding: padding,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: dense ? 13 : 15, color: colors.foreground),
-            const SizedBox(width: 6),
-          ],
-          Text(
-            label,
-            style: TextStyle(
-              color: colors.foreground,
-              fontSize: dense ? 11.5 : 12.5,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.1,
+    final content = Opacity(
+      opacity: onTap == null ? 0.55 : 1,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: colors.border),
+        ),
+        padding: padding,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showIcon) ...[
+              Icon(
+                icon,
+                size: dense ? 12 : 14,
+                color: colors.foreground,
+                semanticLabel: '',
+              ),
+              const SizedBox(width: 5),
+            ],
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colors.foreground,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.0,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
 
     if (onTap == null) {
       return content;
     }
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: content,
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: content,
+      ),
     );
   }
 
@@ -451,16 +464,7 @@ class SectionHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (icon != null) ...[
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-              alignment: Alignment.center,
-              child: Icon(icon, color: scheme.primary, size: 18),
-            ),
+            Icon(icon, color: scheme.primary, size: 20),
             const SizedBox(width: AppSpacing.s),
           ],
           Expanded(

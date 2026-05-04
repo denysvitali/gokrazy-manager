@@ -48,12 +48,9 @@ class UpdateCard extends StatelessWidget {
           ),
           if (progress != null) ...[
             const SizedBox(height: AppSpacing.xs),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 10,
-              ),
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
             ),
             const SizedBox(height: 6),
             Row(
@@ -78,33 +75,14 @@ class UpdateCard extends StatelessWidget {
           ] else if (message != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppPalette.emerald.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.s,
-                  vertical: AppSpacing.xs,
-                ),
-                child: Semantics(
-                  liveRegion: true,
-                  child: Row(
-                  children: [
-                    const Icon(
-                      Icons.check_circle_rounded,
-                      color: AppPalette.emerald,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      message!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppPalette.emerald,
-                          ),
-                    ),
-                  ],
+              child: Semantics(
+                liveRegion: true,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: StatusPill(
+                    label: message!,
+                    icon: Icons.check_circle_rounded,
+                    tone: StatusTone.success,
                   ),
                 ),
               ),
@@ -115,31 +93,33 @@ class UpdateCard extends StatelessWidget {
             onPressed: onUpload,
           ),
           const SizedBox(height: AppSpacing.s),
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 1.4,
-            crossAxisSpacing: AppSpacing.s,
-            mainAxisSpacing: AppSpacing.s,
+          Row(
             children: [
-              _ActionButtonTile(
-                icon: Icons.fact_check_rounded,
-                label: 'Testboot',
-                tone: StatusTone.warning,
-                onTap: busy ? null : onTestboot,
+              Expanded(
+                child: _ActionButtonTile(
+                  icon: Icons.fact_check_rounded,
+                  label: 'Testboot',
+                  tone: StatusTone.warning,
+                  onTap: busy ? null : onTestboot,
+                ),
               ),
-              _ActionButtonTile(
-                icon: Icons.swap_horiz_rounded,
-                label: 'Switch',
-                tone: StatusTone.info,
-                onTap: busy ? null : onSwitch,
+              const SizedBox(width: AppSpacing.s),
+              Expanded(
+                child: _ActionButtonTile(
+                  icon: Icons.swap_horiz_rounded,
+                  label: 'Switch',
+                  tone: StatusTone.info,
+                  onTap: busy ? null : onSwitch,
+                ),
               ),
-              _ActionButtonTile(
-                icon: Icons.power_settings_new_rounded,
-                label: 'Reboot',
-                tone: StatusTone.error,
-                onTap: busy ? null : onReboot,
+              const SizedBox(width: AppSpacing.s),
+              Expanded(
+                child: _ActionButtonTile(
+                  icon: Icons.power_settings_new_rounded,
+                  label: 'Reboot',
+                  tone: StatusTone.error,
+                  onTap: busy ? null : onReboot,
+                ),
               ),
             ],
           ),
@@ -255,65 +235,12 @@ class _ActionButtonTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    Color base;
-    switch (tone) {
-      case StatusTone.error:
-        base = AppPalette.coral;
-        break;
-      case StatusTone.warning:
-        base = AppPalette.amber;
-        break;
-      case StatusTone.info:
-        base = AppPalette.cyan;
-        break;
-      case StatusTone.success:
-        base = AppPalette.emerald;
-        break;
-      case StatusTone.primary:
-        base = scheme.primary;
-        break;
-      case StatusTone.neutral:
-        base = AppPalette.slate700;
-    }
-
-    final disabled = onTap == null;
-    return Opacity(
-      opacity: disabled ? 0.45 : 1,
-      child: Material(
-        color: Colors.transparent,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: base.withValues(alpha: dark ? 0.16 : 0.10),
-            border: Border.all(color: base.withValues(alpha: 0.4)),
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.s),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, color: base, size: 22),
-                  const SizedBox(height: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: base,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return StatusPill(
+      icon: icon,
+      label: label,
+      tone: tone,
+      dense: true,
+      onTap: onTap,
     );
   }
 }

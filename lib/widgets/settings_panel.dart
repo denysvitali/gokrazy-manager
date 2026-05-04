@@ -208,97 +208,105 @@ class _ThemeOption extends StatelessWidget {
     final dark = theme.brightness == Brightness.dark;
     final isSelected = selected == variant;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: () {
-          appThemeVariant.value = variant;
-          scheduleThemeSave(variant);
-        },
-        child: AnimatedContainer(
-          duration: motionDuration(context, AppMotion.fast),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            color: isSelected
-                ? scheme.primary.withValues(alpha: dark ? 0.18 : 0.10)
-                : (dark
-                    ? Colors.white.withValues(alpha: 0.03)
-                    : Colors.black.withValues(alpha: 0.02)),
-            border: Border.all(
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: '$label theme option',
+      hint: isSelected
+          ? '$label theme is currently selected'
+          : 'Select the $label theme',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          onTap: () {
+            appThemeVariant.value = variant;
+            scheduleThemeSave(variant);
+          },
+          child: AnimatedContainer(
+            duration: motionDuration(context, AppMotion.fast),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
               color: isSelected
-                  ? scheme.primary.withValues(alpha: 0.65)
+                  ? scheme.primary.withValues(alpha: dark ? 0.18 : 0.10)
                   : (dark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.04)),
-              width: isSelected ? 1.6 : 1,
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : Colors.black.withValues(alpha: 0.02)),
+              border: Border.all(
+                color: isSelected
+                    ? scheme.primary.withValues(alpha: 0.65)
+                    : (dark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.04)),
+                width: isSelected ? 1.6 : 1,
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-          ),
-          padding: const EdgeInsets.all(AppSpacing.s + 2),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: scheme.primary.withValues(
-                    alpha: isSelected ? 0.20 : 0.10,
+            padding: const EdgeInsets.all(AppSpacing.s + 2),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(
+                      alpha: isSelected ? 0.20 : 0.10,
+                    ),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  alignment: Alignment.center,
+                  child: Icon(icon, color: scheme.primary, size: 20),
                 ),
-                alignment: Alignment.center,
-                child: Icon(icon, color: scheme.primary, size: 20),
-              ),
-              const SizedBox(width: AppSpacing.s),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      label,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      description,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                            color: dark
-                                ? Colors.white.withValues(alpha: 0.6)
-                                : Colors.black.withValues(alpha: 0.55),
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              AnimatedContainer(
-                duration: motionDuration(context, AppMotion.fast),
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSelected ? scheme.primary : Colors.transparent,
-                  border: Border.all(
-                    color: isSelected
-                        ? scheme.primary
-                        : (dark
-                            ? Colors.white.withValues(alpha: 0.35)
-                            : Colors.black.withValues(alpha: 0.3)),
-                    width: 2,
+                const SizedBox(width: AppSpacing.s),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        description,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                              color: dark
+                                  ? Colors.white.withValues(alpha: 0.6)
+                                  : Colors.black.withValues(alpha: 0.55),
+                            ),
+                      ),
+                    ],
                   ),
                 ),
-                child: isSelected
-                    ? const Icon(
-                        Icons.check_rounded,
-                        size: 14,
-                        color: Colors.white,
-                      )
-                    : null,
-              ),
-            ],
+                AnimatedContainer(
+                  duration: motionDuration(context, AppMotion.fast),
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? scheme.primary : Colors.transparent,
+                    border: Border.all(
+                      color: isSelected
+                          ? scheme.primary
+                          : (dark
+                              ? Colors.white.withValues(alpha: 0.35)
+                              : Colors.black.withValues(alpha: 0.3)),
+                      width: 2,
+                    ),
+                  ),
+                  child: isSelected
+                      ? const Icon(
+                          Icons.check_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        )
+                      : null,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -321,7 +329,7 @@ class _AboutCard extends StatelessWidget {
           const SectionHeader(
             title: 'About',
             subtitle: 'Gokrazy Manager',
-            icon: Icons.info_outline_rounded,
+            icon: null,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -330,6 +338,13 @@ class _AboutCard extends StatelessWidget {
             'from anywhere on the network.',
             style: theme.textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.8),
+                ),
+          ),
+          const SizedBox(height: AppSpacing.s),
+          Text(
+            'This app is open-source and supports self-signed certificates.',
+            style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.65),
                 ),
           ),
         ],

@@ -10,7 +10,6 @@ class HeroHeaderCard extends StatelessWidget {
     required this.instance,
     required this.status,
     required this.hasError,
-    required this.onRefresh,
     required this.onEdit,
     required this.onDelete,
     super.key,
@@ -19,7 +18,6 @@ class HeroHeaderCard extends StatelessWidget {
   final GokrazyInstance instance;
   final GokrazyStatus? status;
   final bool hasError;
-  final VoidCallback onRefresh;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -121,13 +119,6 @@ class HeroHeaderCard extends StatelessWidget {
                       ),
                     ),
                     _ActionButton(
-                      icon: Icons.sync_rounded,
-                      tooltip: 'Refresh',
-                      label: 'Refresh appliance',
-                      onPressed: onRefresh,
-                    ),
-                    const SizedBox(width: 4),
-                    _ActionButton(
                       icon: Icons.edit_rounded,
                       tooltip: 'Edit',
                       label: 'Edit appliance',
@@ -158,9 +149,7 @@ class HeroHeaderCard extends StatelessWidget {
                 else if (hasError)
                   _HeroMessage(
                     icon: Icons.error_outline_rounded,
-                    text: 'Connection failed. Tap retry to try again.',
-                    actionLabel: 'Retry',
-                    onAction: onRefresh,
+                    text: 'Connection failed. Use Refresh to retry.',
                   )
                 else
                   _HeroMessage(

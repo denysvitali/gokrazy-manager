@@ -188,8 +188,8 @@ ThemeData buildAppTheme(Brightness brightness, {bool amoledBlack = false}) {
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
         ),
-        padding: const WidgetStatePropertyAll(EdgeInsets.all(AppSpacing.xs)),
-        minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
+        padding: const WidgetStatePropertyAll(EdgeInsets.all(AppSpacing.xs / 1.5)),
+        minimumSize: const WidgetStatePropertyAll(Size(36, 36)),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
