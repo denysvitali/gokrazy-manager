@@ -968,7 +968,7 @@ class _HomeShellState extends State<HomeShell> {
               icon: const Icon(Icons.delete_sweep_rounded),
             ),
           ),
-        if (_routeTab == 0 && _instances.isNotEmpty)
+        if (_routeTab == 0 && _instances.isNotEmpty && !isInstanceDetailRoute)
           Semantics(
             button: true,
             label: 'Refresh selected appliance',
@@ -977,17 +977,6 @@ class _HomeShellState extends State<HomeShell> {
               tooltip: 'Refresh selected',
               onPressed: selected == null ? null : () => _refresh(selected),
               icon: const Icon(Icons.refresh_rounded),
-            ),
-          ),
-        if (_routeTab == 0 && _instances.isNotEmpty)
-          Semantics(
-            button: true,
-            label: 'Refresh all appliances',
-            hint: 'Fetch latest status from all appliances',
-            child: IconButton(
-              tooltip: 'Refresh all',
-              onPressed: _loading ? null : _refreshAll,
-              icon: const Icon(Icons.sync_rounded),
             ),
           ),
         const SizedBox(width: AppSpacing.xs),
