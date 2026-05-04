@@ -29,6 +29,9 @@ This is a Flutter Android app (`gokrazy-manager`) for managing gokrazy devices o
 - HTTP client (`lib/api.dart`) for status/service actions and firmware updates
 - Routing via `go_router`
 
+## Documentation
+- [Firmware Upload Protocol](docs/upload.md) - How uploads work, HTTP protocol, server/client processing
+
 ## Environment and tooling
 - Follow existing repository tooling and `devenv` config.
 - Prefer repository scripts/`flutter` commands over introducing new tooling.

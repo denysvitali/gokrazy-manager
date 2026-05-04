@@ -171,6 +171,17 @@ class GokrazyClient {
     }
   }
 
+  /// Uploads a squashfs image to the gokrazy device's inactive root partition.
+  ///
+  /// The upload process:
+  /// 1. Sends the image as a PUT request to /update/root
+  /// 2. The device writes to the inactive partition while computing SHA-256
+  /// 3. Device returns the computed hash as the response body
+  /// 4. Client verifies the hash matches its local computation
+  ///
+  /// Note: The [onProgress] callback fires when chunks are buffered locally,
+  /// not when data is transmitted. For large images, the server may still
+  /// be writing to disk after the client sees 100% progress.
   Future<void> uploadRoot({
     required Stream<List<int>> stream,
     required int size,
@@ -196,22 +207,27 @@ class GokrazyClient {
       _setHeaders(request);
 
       var sent = 0;
+      // Track first 6 bytes of the original input (before any decompression)
       final inputBytes = <int>[];
+      // Track first 6 bytes of what will be sent (after decompression if any)
       final uploadedBytes = <int>[];
-      var loggedPreview = false;
-      void logPreview() {
-        if (loggedPreview) {
+      var previewLogged = false;
+
+      void logPreview({required bool fromInputTap, required bool fromOutputTap}) {
+        if (previewLogged) {
           return;
         }
-        if (inputBytes.length < 6 && uploadedBytes.length < 6) {
+        // Log preview once we have enough bytes from either source
+        final hasEnough = inputBytes.length >= 6 || uploadedBytes.length >= 6;
+        if (!hasEnough) {
           return;
         }
-        loggedPreview = true;
+        previewLogged = true;
         final isGzip = inputBytes.length >= 2 &&
             inputBytes[0] == 0x1F &&
             inputBytes[1] == 0x8B;
         debugPrint(
-          'uploadRoot: input_gzip=$isGzip '
+          'uploadRoot: decompress=$decompress input_gzip=$isGzip '
           'input_hex=${formatBytesHex(inputBytes)} '
           'input_ascii="${formatBytesAscii(inputBytes)}" '
           'uploaded_hex=${formatBytesHex(uploadedBytes)} '
@@ -219,43 +235,66 @@ class GokrazyClient {
         );
       }
 
-      final tap = StreamTransformer<List<int>, List<int>>.fromHandlers(
+      // First transformer: track progress and capture input bytes
+      final inputTap = StreamTransformer<List<int>, List<int>>.fromHandlers(
         handleData: (chunk, sink) {
           sent += chunk.length;
           onProgress(sent, size);
           if (inputBytes.length < 6) {
             inputBytes.addAll(chunk.take(6 - inputBytes.length));
-            if (inputBytes.length >= 6) {
-              logPreview();
-            }
+            logPreview(fromInputTap: true, fromOutputTap: false);
           }
           sink.add(chunk);
         },
       );
+
+      // Second transformer: capture uploaded bytes and log preview
       final outputTap = StreamTransformer<List<int>, List<int>>.fromHandlers(
         handleData: (chunk, sink) {
           if (uploadedBytes.length < 6) {
             uploadedBytes.addAll(chunk.take(6 - uploadedBytes.length));
+            logPreview(fromInputTap: false, fromOutputTap: true);
           }
-          logPreview();
           sink.add(chunk);
         },
       );
 
-      Stream<List<int>> uploadStream = stream.transform(tap);
-      final hashed = decompress
-          ? uploadStream.transform(io.gzip.decoder).transform(outputTap)
-          : uploadStream.transform(outputTap);
-      final sharedHashed = hashed.asBroadcastStream();
-      final localHashFuture = sha256.bind(sharedHashed).first.then(
+      Stream<List<int>> uploadStream = stream.transform(inputTap);
+      if (decompress) {
+        uploadStream = uploadStream.transform(io.gzip.decoder);
+      }
+      uploadStream = uploadStream.transform(outputTap);
+
+      // Create broadcast stream for simultaneous hash computation and upload
+      final sharedStream = uploadStream.asBroadcastStream();
+
+      // Compute local hash while uploading
+      final localHashFuture = sha256.bind(sharedStream).first.then(
             (digest) => digest.toString(),
           );
 
-      await request.addStream(sharedHashed);
-      logPreview();
+      // Add stream to request and wait for it to complete
+      // This ensures all data has been read from the stream
+      debugPrint('uploadRoot: starting addStream (size=$size)');
+      await request.addStream(sharedStream);
+      debugPrint('uploadRoot: addStream complete, waiting for hash');
+
+      // After addStream completes, log preview again in case output tap
+      // received data after the input tap finished
+      logPreview(fromInputTap: false, fromOutputTap: true);
+
+      // Wait for hash computation to complete
       final localHash = await localHashFuture;
+      debugPrint('uploadRoot: local hash=$localHash');
+
+      // Close request and get response
+      debugPrint('uploadRoot: closing request, waiting for response');
       final response = await request.close();
+      debugPrint('uploadRoot: response status=${response.statusCode}');
+
       final body = (await response.transform(utf8.decoder).join()).trim();
+      debugPrint('uploadRoot: response body=$body');
+
       if (response.statusCode != HttpStatus.ok) {
         throw HttpException('HTTP ${response.statusCode}: $body');
       }
@@ -264,6 +303,8 @@ class GokrazyClient {
         throw StateError(
             'Checksum mismatch: device returned $body, sent $localHash');
       }
+
+      debugPrint('uploadRoot: upload verified successfully');
     } on CertificatePinRequired {
       rethrow;
     } on HandshakeException {

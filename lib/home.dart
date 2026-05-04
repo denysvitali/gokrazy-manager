@@ -668,14 +668,16 @@ class _HomeShellState extends State<HomeShell> {
             return;
           }
           final ratio = sent / total;
-          final finalize = ratio >= 1.0;
-          final progress = finalize ? 0.99 : ratio.clamp(0.0, 0.99);
+          // Note: progress reaches 100% when all data is buffered locally.
+          // The server may still be writing the large image to disk.
+          // We cap at 99% to indicate we're waiting for server response.
+          final progress = ratio >= 1.0 ? 0.99 : ratio.clamp(0.0, 0.99);
           setState(() {
             _uploadByInstance[instance.id] = _UploadState(
               progress: progress.toDouble(),
               message:
-                  finalize
-                      ? 'Upload stream complete, verifying checksum'
+                  ratio >= 1.0
+                      ? 'Waiting for device to write image...'
                       : 'Uploading ${file.name}${isGzipped ? ' (decompressing)' : ''}',
             );
           });
