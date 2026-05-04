@@ -850,6 +850,14 @@ class _HomeShellState extends State<HomeShell> {
         GoRouter.of(context).routerDelegate.currentConfiguration.uri;
     final isInstanceDetailRoute = location.pathSegments.length == 2 &&
         location.pathSegments.first == 'instance';
+    final detailTabs = isInstanceDetailRoute ? _tabsForCurrentInstance(selected) : null;
+    final activeDetailTabIndex = detailTabs == null || detailTabs.isEmpty
+        ? 0
+        : (_detailTabIndex < 0 || _detailTabIndex >= detailTabs.length
+            ? 0
+            : _detailTabIndex);
+
+    final showInstanceNav = isInstanceDetailRoute && detailTabs != null;
 
     final body = AnimatedSwitcher(
       duration: motionDuration(context, AppMotion.fast),
@@ -862,7 +870,7 @@ class _HomeShellState extends State<HomeShell> {
 
     final routedBody = WillPopScope(
       onWillPop: () async {
-        if (_routeTab == 0 && isInstanceDetailRoute) {
+        if (isInstanceDetailRoute) {
           _navigateToRoute('/');
           return false;
         }
@@ -873,7 +881,7 @@ class _HomeShellState extends State<HomeShell> {
 
     final scaffold = Scaffold(
       appBar: _buildAppBar(selected, isInstanceDetailRoute),
-      floatingActionButton: _routeTab == 0 && !_loading
+      floatingActionButton: _routeTab == 0 && !_loading && !isInstanceDetailRoute
               ? FloatingActionButton.extended(
                   onPressed: () => _openEditor(),
                   icon: const Icon(Icons.add_rounded),
@@ -884,20 +892,39 @@ class _HomeShellState extends State<HomeShell> {
       bottomNavigationBar: useRail
           ? null
           : NavigationBar(
-              selectedIndex: _routeTab,
-              onDestinationSelected: _switchTab,
-              destinations: [
-                NavigationDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard_rounded),
-                  label: 'Dashboard',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.tune_outlined),
-                  selectedIcon: Icon(Icons.tune_rounded),
-                  label: 'Settings',
-                ),
-              ],
+              selectedIndex: showInstanceNav
+                  ? activeDetailTabIndex
+                  : _routeTab,
+              onDestinationSelected: (index) {
+                if (showInstanceNav && detailTabs != null) {
+                  if (index >= 0 && index < detailTabs.length) {
+                    setState(() => _detailTabIndex = index);
+                  }
+                  return;
+                }
+                _switchTab(index);
+              },
+              destinations: showInstanceNav
+                  ? [
+                      for (final tab in detailTabs ?? const <_InstanceTab>[])
+                        NavigationDestination(
+                          icon: Icon(tab.icon),
+                          selectedIcon: Icon(tab.icon),
+                          label: tab.label,
+                        ),
+                    ]
+                  : [
+                      NavigationDestination(
+                        icon: Icon(Icons.dashboard_outlined),
+                        selectedIcon: Icon(Icons.dashboard_rounded),
+                        label: 'Dashboard',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.tune_outlined),
+                        selectedIcon: Icon(Icons.tune_rounded),
+                        label: 'Settings',
+                      ),
+                    ],
             ),
     );
 
@@ -907,9 +934,19 @@ class _HomeShellState extends State<HomeShell> {
     return Row(
       children: [
         SafeArea(
-        child: NavigationRail(
-            selectedIndex: _routeTab,
-            onDestinationSelected: _switchTab,
+            child: NavigationRail(
+            selectedIndex: showInstanceNav
+                ? activeDetailTabIndex
+                : _routeTab,
+            onDestinationSelected: (index) {
+              if (showInstanceNav && detailTabs != null) {
+                if (index >= 0 && index < detailTabs.length) {
+                  setState(() => _detailTabIndex = index);
+                }
+                return;
+              }
+              _switchTab(index);
+            },
             labelType: NavigationRailLabelType.all,
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
@@ -918,18 +955,27 @@ class _HomeShellState extends State<HomeShell> {
                 size: 48,
               ),
             ),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard_rounded),
-                label: Text('Dashboard'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.tune_outlined),
-                selectedIcon: Icon(Icons.tune_rounded),
-                label: Text('Settings'),
-              ),
-            ],
+            destinations: showInstanceNav
+                ? [
+                    for (final tab in detailTabs ?? const <_InstanceTab>[])
+                      NavigationRailDestination(
+                        icon: Icon(tab.icon),
+                        selectedIcon: Icon(tab.icon),
+                        label: Text(tab.label),
+                      ),
+                  ]
+                : const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.dashboard_outlined),
+                      selectedIcon: Icon(Icons.dashboard_rounded),
+                      label: Text('Dashboard'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.tune_outlined),
+                      selectedIcon: Icon(Icons.tune_rounded),
+                      label: Text('Settings'),
+                    ),
+                  ],
           ),
         ),
         const VerticalDivider(width: 1),
@@ -984,19 +1030,12 @@ class _HomeShellState extends State<HomeShell> {
               onPressed: _clearInstanceSelection,
               icon: const Icon(Icons.close_rounded),
             )
-                : isInstanceDetailRoute
+          : isInstanceDetailRoute
               ? IconButton(
-              tooltip: 'Back',
-              onPressed: () {
-                final navigator = Navigator.of(context);
-                if (navigator.canPop()) {
-                  navigator.pop();
-                } else {
-                  _navigateToRoute('/');
-                }
-              },
-              icon: const Icon(Icons.arrow_back_rounded),
-            )
+                  tooltip: 'Back',
+                  onPressed: () => _navigateToRoute('/'),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                )
           : null,
       actions: [
         if (isSelectionMode && selectedForEdit != null)
@@ -1046,6 +1085,17 @@ class _HomeShellState extends State<HomeShell> {
         const SizedBox(width: AppSpacing.xs),
       ],
     );
+  }
+
+  List<_InstanceTab>? _tabsForCurrentInstance(GokrazyInstance? selected) {
+    if (selected == null) {
+      return null;
+    }
+    final status = _statuses[selected.id];
+    if (status == null) {
+      return null;
+    }
+    return _tabsForStatus(status);
   }
 
   Widget _buildDashboard(BuildContext context, GokrazyInstance? selected, bool showDetail) {

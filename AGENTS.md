@@ -19,6 +19,7 @@ For non-trivial tasks:
 3. Apply the smallest behavior-preserving fix/feature first.
 4. Run the most focused validation available.
 5. Summarize what changed, validation, and residual risks.
+6. Commit and push changes.
 
 For small tasks, proceed directly with minimal edits.
 
