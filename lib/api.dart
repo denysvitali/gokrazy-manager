@@ -73,6 +73,9 @@ class GokrazyClient {
     required this.password,
   });
 
+  static const _defaultConnectionTimeout = Duration(seconds: 12);
+  static const _firmwareUploadConnectionTimeout = Duration(minutes: 10);
+
   final GokrazyInstance instance;
   final String password;
 
@@ -201,6 +204,7 @@ class GokrazyClient {
 
     String? untrustedFingerprint;
     final client = _httpClient(
+      connectionTimeout: _firmwareUploadConnectionTimeout,
       onBadCertificate: (fingerprint) => untrustedFingerprint = fingerprint,
     );
     try {
@@ -416,9 +420,12 @@ class GokrazyClient {
     }
   }
 
-  HttpClient _httpClient({void Function(String fingerprint)? onBadCertificate}) {
+  HttpClient _httpClient({
+    Duration connectionTimeout = _defaultConnectionTimeout,
+    void Function(String fingerprint)? onBadCertificate,
+  }) {
     return HttpClient()
-      ..connectionTimeout = const Duration(seconds: 12)
+      ..connectionTimeout = connectionTimeout
       ..badCertificateCallback = (cert, host, port) {
         final fingerprint = certificateFingerprint(cert);
         onBadCertificate?.call(fingerprint);
