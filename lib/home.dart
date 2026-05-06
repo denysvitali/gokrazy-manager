@@ -201,6 +201,9 @@ class _HomeShellState extends State<HomeShell> {
     if (repo == null) {
       return;
     }
+    if (_busyInstances.contains(instance.id)) {
+      return;
+    }
     if (_statusLoading.contains(instance.id)) {
       return;
     }
@@ -252,6 +255,9 @@ class _HomeShellState extends State<HomeShell> {
       }
     } catch (error) {
       if (!mounted) {
+        return;
+      }
+      if (_busyInstances.contains(instance.id)) {
         return;
       }
       setState(() => _errors[instance.id] = error.toString());
