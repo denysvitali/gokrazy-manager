@@ -48,6 +48,25 @@ String formatTimeAgo(DateTime value) {
   return '${(diff.inDays / 30).floor()}mo ago';
 }
 
+String formatDurationCompact(Duration value) {
+  final totalSeconds = value.inSeconds;
+  if (totalSeconds < 60) {
+    return '${totalSeconds}s';
+  }
+
+  final days = value.inDays;
+  final hours = value.inHours.remainder(24);
+  final minutes = value.inMinutes.remainder(60);
+
+  if (days > 0) {
+    return hours > 0 ? '${days}d ${hours}h' : '${days}d';
+  }
+  if (hours > 0) {
+    return minutes > 0 ? '${hours}h ${minutes}m' : '${hours}h';
+  }
+  return '${minutes}m';
+}
+
 /// Deterministic accent color derived from a string (instance id, hostname).
 /// Returns a hue in [0, 360) so the surrounding theme can shape saturation.
 double hueFromString(String value) {

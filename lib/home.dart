@@ -42,6 +42,7 @@ class _HomeShellState extends State<HomeShell> {
   String? _selectedId;
   bool _loading = true;
   String _lastLocation = '';
+  Timer? _statusRefreshTimer;
 
   final Map<String, _UploadState> _uploadByInstance = {};
   int _instanceTab = 0;
@@ -51,6 +52,12 @@ class _HomeShellState extends State<HomeShell> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _statusRefreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -160,19 +167,41 @@ class _HomeShellState extends State<HomeShell> {
       _selectedId = instances.isEmpty ? null : instances.first.id;
       _loading = false;
     });
+    _startStatusRefreshTimer();
     unawaited(_refreshAll());
     _syncFromRoute();
   }
 
-  Future<void> _refreshAll() async {
+  void _startStatusRefreshTimer() {
+    _statusRefreshTimer?.cancel();
+    _statusRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!mounted || _loading || _routeTab != 0) {
+        return;
+      }
+      unawaited(_refreshAll(interactiveCertificate: false));
+    });
+  }
+
+  Future<void> _refreshAll({bool interactiveCertificate = true}) async {
     for (final instance in _instances) {
-      unawaited(_refresh(instance));
+      unawaited(
+        _refresh(
+          instance,
+          interactiveCertificate: interactiveCertificate,
+        ),
+      );
     }
   }
 
-  Future<void> _refresh(GokrazyInstance instance) async {
+  Future<void> _refresh(
+    GokrazyInstance instance, {
+    bool interactiveCertificate = true,
+  }) async {
     final repo = _repo;
     if (repo == null) {
+      return;
+    }
+    if (_statusLoading.contains(instance.id)) {
       return;
     }
     setState(() {
@@ -205,6 +234,10 @@ class _HomeShellState extends State<HomeShell> {
       await _markSeen(instance);
     } on CertificatePinRequired catch (error) {
       if (!mounted) {
+        return;
+      }
+      if (!interactiveCertificate) {
+        setState(() => _errors[instance.id] = 'Certificate not trusted');
         return;
       }
       final accepted = await _confirmCertificate(error.fingerprint);

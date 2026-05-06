@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../format.dart';
 import '../models.dart';
 import '../theme.dart';
 import 'common.dart';
@@ -65,6 +66,15 @@ class OverviewCard extends StatelessWidget {
                       fontWeight: FontWeight.w400,
                     ),
                   ),
+                  if (status.uptime != null)
+                    InfoTile(
+                      icon: Icons.timer_rounded,
+                      label: 'UPTIME',
+                      value: formatDurationCompact(status.uptime!),
+                      valueStyle: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
                   if (status.buildTimestamp != null)
                     InfoTile(
                       icon: Icons.schedule_rounded,

@@ -75,6 +75,7 @@ class GokrazyStatus {
     this.memAvailable,
     this.bootPart,
     this.upgradePart,
+    this.uptime,
   });
 
   final List<GokrazyService> services;
@@ -92,6 +93,7 @@ class GokrazyStatus {
   final int? memAvailable;
   final String? bootPart;
   final String? upgradePart;
+  final Duration? uptime;
 
   int get runningServices => services.where((svc) => svc.running).length;
   int get totalServices => services.length;
@@ -116,6 +118,9 @@ class GokrazyStatus {
       memAvailable: _asInt(meminfo['MemAvailable']),
       bootPart: json['BootPart'] as String?,
       upgradePart: json['UpgradePart'] as String?,
+      uptime: _asDuration(json['Uptime']) ??
+          _asDuration(json['UptimeSeconds']) ??
+          _asDuration(json['UptimeNanos'], unit: _DurationUnit.nanoseconds),
     );
   }
 }
@@ -183,3 +188,40 @@ int? _asInt(Object? value) {
   }
   return null;
 }
+
+Duration? _asDuration(
+  Object? value, {
+  _DurationUnit unit = _DurationUnit.auto,
+}) {
+  final parsed = _asDouble(value);
+  if (parsed == null || parsed < 0) {
+    return null;
+  }
+
+  switch (unit) {
+    case _DurationUnit.nanoseconds:
+      return Duration(microseconds: (parsed / 1000).round());
+    case _DurationUnit.auto:
+      // Go's time.Duration marshals to nanoseconds. If gokrazy exposes uptime
+      // as plain seconds instead, the value is small enough to keep as seconds.
+      if (parsed > 1000000000) {
+        return Duration(microseconds: (parsed / 1000).round());
+      }
+      return Duration(seconds: parsed.round());
+  }
+}
+
+double? _asDouble(Object? value) {
+  if (value is int) {
+    return value.toDouble();
+  }
+  if (value is num) {
+    return value.toDouble();
+  }
+  if (value is String) {
+    return double.tryParse(value);
+  }
+  return null;
+}
+
+enum _DurationUnit { auto, nanoseconds }
