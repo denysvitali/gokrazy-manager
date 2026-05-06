@@ -74,7 +74,6 @@ class GokrazyClient {
   });
 
   static const _defaultConnectionTimeout = Duration(seconds: 12);
-  static const _firmwareUploadConnectionTimeout = Duration(minutes: 10);
 
   final GokrazyInstance instance;
   final String password;
@@ -204,7 +203,9 @@ class GokrazyClient {
 
     String? untrustedFingerprint;
     final client = _httpClient(
-      connectionTimeout: _firmwareUploadConnectionTimeout,
+      // Flashing can spend a long time connected while the device writes
+      // the root image and returns the verification hash.
+      connectionTimeout: null,
       onBadCertificate: (fingerprint) => untrustedFingerprint = fingerprint,
     );
     try {
@@ -421,7 +422,7 @@ class GokrazyClient {
   }
 
   HttpClient _httpClient({
-    Duration connectionTimeout = _defaultConnectionTimeout,
+    Duration? connectionTimeout = _defaultConnectionTimeout,
     void Function(String fingerprint)? onBadCertificate,
   }) {
     return HttpClient()
