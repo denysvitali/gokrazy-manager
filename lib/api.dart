@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:io' as io;
 
+import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -182,13 +183,15 @@ class GokrazyClient {
   /// 3. Device returns the computed hash as the response body
   /// 4. Client verifies the hash matches its local computation
   ///
-  /// Note: The [onProgress] callback fires when chunks are buffered locally,
-  /// not when data is transmitted. For large images, the server may still
-  /// be writing to disk after the client sees 100% progress.
+  /// [total] is the expected size of the *uploaded* (post-decompression)
+  /// payload, or null if unknown. [onProgress] reports bytes that have been
+  /// accepted by the request stream sink — backpressure from the socket
+  /// throttles this, so the count tracks actual transmission within the
+  /// size of OS/TLS buffers.
   Future<void> uploadRoot({
     required Stream<List<int>> stream,
-    required int size,
-    required void Function(int sent, int total) onProgress,
+    required int? total,
+    required void Function(int sent, int? total) onProgress,
     bool decompress = false,
   }) async {
     String formatBytesHex(List<int> bytes) {
@@ -213,17 +216,17 @@ class GokrazyClient {
       _setHeaders(request);
 
       var sent = 0;
-      // Track first 6 bytes of the original input (before any decompression)
       final inputBytes = <int>[];
-      // Track first 6 bytes of what will be sent (after decompression if any)
       final uploadedBytes = <int>[];
       var previewLogged = false;
+
+      final hashAccumulator = AccumulatorSink<Digest>();
+      final hashSink = sha256.startChunkedConversion(hashAccumulator);
 
       void logPreview({required bool fromInputTap, required bool fromOutputTap}) {
         if (previewLogged) {
           return;
         }
-        // Log preview once we have enough bytes from either source
         final hasEnough = inputBytes.length >= 6 || uploadedBytes.length >= 6;
         if (!hasEnough) {
           return;
@@ -241,11 +244,9 @@ class GokrazyClient {
         );
       }
 
-      // First transformer: track progress and capture input bytes
+      // Capture preview bytes from the raw input (before decompression).
       final inputTap = StreamTransformer<List<int>, List<int>>.fromHandlers(
         handleData: (chunk, sink) {
-          sent += chunk.length;
-          onProgress(sent, size);
           if (inputBytes.length < 6) {
             inputBytes.addAll(chunk.take(6 - inputBytes.length));
             logPreview(fromInputTap: true, fromOutputTap: false);
@@ -254,9 +255,16 @@ class GokrazyClient {
         },
       );
 
-      // Second transformer: capture uploaded bytes and log preview
+      // Track progress and hash on the post-decompression stream — these
+      // are the bytes the device will actually receive and verify.
+      // Counting here (rather than at the source) lets addStream's
+      // backpressure throttle the read pipeline, so `sent` tracks actual
+      // socket throughput instead of disk-read speed.
       final outputTap = StreamTransformer<List<int>, List<int>>.fromHandlers(
         handleData: (chunk, sink) {
+          sent += chunk.length;
+          hashSink.add(chunk);
+          onProgress(sent, total);
           if (uploadedBytes.length < 6) {
             uploadedBytes.addAll(chunk.take(6 - uploadedBytes.length));
             logPreview(fromInputTap: false, fromOutputTap: true);
@@ -271,29 +279,13 @@ class GokrazyClient {
       }
       uploadStream = uploadStream.transform(outputTap);
 
-      // Create broadcast stream for simultaneous hash computation and upload
-      final sharedStream = uploadStream.asBroadcastStream();
-
-      // Compute local hash while uploading
-      final localHashFuture = sha256.bind(sharedStream).first.then(
-            (digest) => digest.toString(),
-          );
-
-      // Add stream to request and wait for it to complete
-      // This ensures all data has been read from the stream
-      debugPrint('uploadRoot: starting addStream (size=$size)');
-      await request.addStream(sharedStream);
-      debugPrint('uploadRoot: addStream complete, waiting for hash');
-
-      // After addStream completes, log preview again in case output tap
-      // received data after the input tap finished
+      debugPrint('uploadRoot: starting addStream (total=$total)');
+      await request.addStream(uploadStream);
+      hashSink.close();
+      final localHash = hashAccumulator.events.single.toString();
+      debugPrint('uploadRoot: addStream complete, local hash=$localHash');
       logPreview(fromInputTap: false, fromOutputTap: true);
 
-      // Wait for hash computation to complete
-      final localHash = await localHashFuture;
-      debugPrint('uploadRoot: local hash=$localHash');
-
-      // Close request and get response
       debugPrint('uploadRoot: closing request, waiting for response');
       final response = await request.close();
       debugPrint('uploadRoot: response status=${response.statusCode}');

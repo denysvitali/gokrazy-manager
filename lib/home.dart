@@ -703,34 +703,52 @@ class _HomeShellState extends State<HomeShell> {
       return;
     }
     final isGzipped = file.name.endsWith('.gz');
+    int? total;
+    if (isGzipped) {
+      if (file.path != null) {
+        total = await _gzipUncompressedSize(file.path!);
+      }
+    } else {
+      total = file.size;
+    }
     setState(() {
       _busyInstances.add(instance.id);
-      _uploadByInstance[instance.id] = const _UploadState(
-        progress: 0,
+      _uploadByInstance[instance.id] = _UploadState(
+        progress: total == null ? null : 0,
         message: 'Starting upload...',
+        uploading: true,
       );
     });
     try {
       await GokrazyClient(instance: instance, password: password).uploadRoot(
         stream: stream,
-        size: file.size,
+        total: total,
         decompress: isGzipped,
-        onProgress: (sent, total) {
-          if (!mounted || total <= 0) {
+        onProgress: (sent, expected) {
+          if (!mounted) {
             return;
           }
-          final ratio = sent / total;
-          // Note: progress reaches 100% when all data is buffered locally.
-          // The server may still be writing the large image to disk.
-          // We cap at 99% to indicate we're waiting for server response.
-          final progress = ratio >= 1.0 ? 0.99 : ratio.clamp(0.0, 0.99);
+          final uploading =
+              'Uploading ${file.name}${isGzipped ? ' (decompressing)' : ''}';
+          if (expected == null || expected <= 0) {
+            setState(() {
+              _uploadByInstance[instance.id] = _UploadState(
+                progress: null,
+                message: uploading,
+                uploading: true,
+              );
+            });
+            return;
+          }
+          final ratio = (sent / expected).clamp(0.0, 1.0).toDouble();
+          final atEnd = sent >= expected;
           setState(() {
             _uploadByInstance[instance.id] = _UploadState(
-              progress: progress.toDouble(),
-              message:
-                  ratio >= 1.0
-                      ? 'Waiting for device to write image...'
-                      : 'Uploading ${file.name}${isGzipped ? ' (decompressing)' : ''}',
+              progress: ratio,
+              message: atEnd
+                  ? 'Verifying with device...'
+                  : uploading,
+              uploading: true,
             );
           });
         },
@@ -779,6 +797,41 @@ class _HomeShellState extends State<HomeShell> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  // Reads the gzip ISIZE field (last 4 bytes, little-endian uint32 mod 2^32)
+  // to estimate the decompressed payload size. Returns null on any error or
+  // for files larger than 4 GiB where ISIZE wraps.
+  Future<int?> _gzipUncompressedSize(String path) async {
+    try {
+      final file = File(path);
+      final length = await file.length();
+      if (length < 18) {
+        return null;
+      }
+      final raf = await file.open();
+      try {
+        await raf.setPosition(length - 4);
+        final tail = await raf.read(4);
+        if (tail.length < 4) {
+          return null;
+        }
+        final isize = tail[0] |
+            (tail[1] << 8) |
+            (tail[2] << 16) |
+            (tail[3] << 24);
+        // ISIZE is mod 2^32; if the compressed file is large enough that the
+        // decompressed size could exceed 4 GiB, the value is unreliable.
+        if (length > 0xFFFFFFFF ~/ 2) {
+          return null;
+        }
+        return isize;
+      } finally {
+        await raf.close();
+      }
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -1248,12 +1301,14 @@ class _HomeShellState extends State<HomeShell> {
     required bool busy,
     required double? progress,
     required String? message,
+    required bool uploading,
   }) {
     return UpdateCard(
       status: status,
       busy: busy,
       progress: progress,
       message: message,
+      uploading: uploading,
       onUpload: () => _uploadSquashfs(instance),
       onTestboot: () => _runAction(
         instance,
@@ -1302,6 +1357,7 @@ class _HomeShellState extends State<HomeShell> {
           busy: busy,
           progress: upload?.progress,
           message: upload?.message,
+          uploading: upload?.uploading ?? false,
         );
       default:
         return const SizedBox.shrink();
@@ -1310,10 +1366,11 @@ class _HomeShellState extends State<HomeShell> {
 }
 
 class _UploadState {
-  const _UploadState({this.progress, this.message});
+  const _UploadState({this.progress, this.message, this.uploading = false});
 
   final double? progress;
   final String? message;
+  final bool uploading;
 }
 
 class _NoSelection extends StatelessWidget {

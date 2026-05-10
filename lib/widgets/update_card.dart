@@ -10,6 +10,7 @@ class UpdateCard extends StatelessWidget {
     required this.busy,
     required this.progress,
     required this.message,
+    required this.uploading,
     required this.onUpload,
     required this.onTestboot,
     required this.onSwitch,
@@ -21,6 +22,7 @@ class UpdateCard extends StatelessWidget {
   final bool busy;
   final double? progress;
   final String? message;
+  final bool uploading;
   final VoidCallback onUpload;
   final VoidCallback onTestboot;
   final VoidCallback onSwitch;
@@ -49,7 +51,7 @@ class UpdateCard extends StatelessWidget {
                   )
                 : null,
           ),
-          if (progress != null) ...[
+          if (uploading) ...[
             const SizedBox(height: AppSpacing.xs),
             LinearProgressIndicator(
               value: progress,
@@ -66,13 +68,14 @@ class UpdateCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Text(
-                  '${((progress ?? 0) * 100).toStringAsFixed(0)}%',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                        color: scheme.primary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
+                if (progress != null)
+                  Text(
+                    '${(progress! * 100).toStringAsFixed(0)}%',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
               ],
             ),
           ] else if (message != null)
