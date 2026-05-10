@@ -121,11 +121,37 @@ class GokrazyClient {
         superviseMode: 'once',
       );
 
-  Future<void> restartService(String path) => _serviceAction(
+  // Restarting a service via gokrazy's POST /restart endpoint races with
+  // the supervisor for services that handle SIGTERM cleanly: the
+  // supervisor's "exited successfully, stopping" branch sets the service
+  // back to stopped=true after /restart cleared it, leaving the service
+  // down. Stop first, give the supervisor time to process the exit, then
+  // re-arm via /restart and verify the service is back up — retrying if
+  // we still lose the race (e.g. for slow shutdowns).
+  Future<void> restartService(String path) async {
+    await _serviceAction(endpoint: 'stop', path: path);
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+
+    for (var attempt = 0; attempt < 4; attempt++) {
+      await _serviceAction(
         endpoint: 'restart',
         path: path,
         superviseMode: 'loop',
       );
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+      try {
+        final status = await fetchStatus();
+        final svc = status.services
+            .where((service) => service.path == path)
+            .firstOrNull;
+        if (svc == null || !svc.stopped) {
+          return;
+        }
+      } catch (_) {
+        // Transient failure — retry the re-arm.
+      }
+    }
+  }
 
   Future<void> stopService(String path) => _serviceAction(
         endpoint: 'stop',
